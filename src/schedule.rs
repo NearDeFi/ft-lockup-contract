@@ -4,6 +4,7 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct Checkpoint {
+    /// The unix-timestamp in seconds since the epoch.
     pub timestamp: TimestampSec,
     #[serde(with = "u128_dec_format")]
     pub balance: Balance,
@@ -11,7 +12,7 @@ pub struct Checkpoint {
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct Schedule(pub Vec<Checkpoint>);
 
 impl Schedule {

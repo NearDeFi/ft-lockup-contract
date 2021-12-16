@@ -2,7 +2,7 @@ use crate::*;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub enum HashOrSchedule {
     Hash(Base58CryptoHash),
     Schedule(Schedule),
@@ -10,7 +10,7 @@ pub enum HashOrSchedule {
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct TerminationConfig {
     /// The account ID that can terminate vesting.
     pub terminator_id: ValidAccountId,
