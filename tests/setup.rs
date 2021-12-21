@@ -61,6 +61,17 @@ pub fn storage_deposit(
     .assert_success();
 }
 
+pub fn storage_force_unregister(user: &UserAccount, contract_id: &str) {
+    user.call(
+        contract_id.to_string(),
+        "storage_unregister",
+        &json!({ "force": true }).to_string().into_bytes(),
+        DEFAULT_GAS,
+        1,
+    )
+    .assert_success();
+}
+
 pub fn ft_storage_deposit(user: &UserAccount, token_account_id: &str, account_id: &str) {
     storage_deposit(
         user,
