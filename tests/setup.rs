@@ -62,11 +62,11 @@ pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
             balance: 0,
         },
         Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 - 1,
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
             balance: amount * 3 / 4,
         },
         Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 + 1,
             balance: amount,
         },
     ]);
@@ -251,6 +251,21 @@ impl Env {
     pub fn terminate(&self, user: &UserAccount, lockup_index: LockupIndex) -> ExecutionResult {
         user.function_call(
             self.contract.contract.terminate(lockup_index, None),
+            TERMINATE_GAS,
+            0,
+        )
+    }
+
+    pub fn terminate_with_schedule(
+        &self,
+        user: &UserAccount,
+        lockup_index: LockupIndex,
+        hashed_schedule: Schedule,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .terminate(lockup_index, Some(hashed_schedule)),
             TERMINATE_GAS,
             0,
         )
