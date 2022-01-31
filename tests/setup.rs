@@ -25,6 +25,7 @@ pub const T_GAS: Gas = 10u64.pow(12);
 pub const DEFAULT_GAS: Gas = 15 * T_GAS;
 pub const MAX_GAS: Gas = 300 * T_GAS;
 pub const CLAIM_GAS: Gas = 100 * T_GAS;
+pub const TERMINATE_GAS: Gas = 100 * T_GAS;
 
 pub const TOKEN_DECIMALS: u8 = 18;
 pub const TOKEN_TOTAL_SUPPLY: Balance = d(1_000_000, TOKEN_DECIMALS);
@@ -172,6 +173,10 @@ impl Env {
 
     pub fn claim(&self, user: &UserAccount) -> ExecutionResult {
         user.function_call(self.contract.contract.claim(), CLAIM_GAS, 0)
+    }
+
+    pub fn terminate(&self, user: &UserAccount, lockup_index: LockupIndex) -> ExecutionResult {
+        user.function_call(self.contract.contract.terminate(lockup_index, None), TERMINATE_GAS, 0)
     }
 
     pub fn get_account_lockups(&self, user: &UserAccount) -> Vec<(LockupIndex, LockupView)> {
