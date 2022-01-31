@@ -436,3 +436,96 @@ fn test_lockup_linear_with_same_termination_schedule() {
     assert_eq!(lockup.claimed_balance, amount / 2);
     assert_eq!(lockup.unclaimed_balance, 0);
 }
+
+#[test]
+fn test_lockup_terminate_no_storage() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    let amount = d(60000, TOKEN_DECIMALS);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert!(lockups.is_empty());
+    let lockup = Lockup {
+        account_id: users.alice.valid_account_id(),
+        schedule: Schedule(vec![
+            Checkpoint {
+                timestamp: GENESIS_TIMESTAMP_SEC,
+                balance: 0,
+            },
+            Checkpoint {
+                timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+                balance: amount,
+            },
+        ]),
+        claimed_balance: 0,
+        termination_config: Some(TerminationConfig {
+            terminator_id: users.eve.valid_account_id(),
+            vesting_schedule: None,
+        }),
+    };
+
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    assert_eq!(balance.0, amount);
+    let lockups = e.get_account_lockups(&users.alice);
+    let lockup_index = lockups[0].0;
+
+    // 1/3 unlock, terminate
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 3);
+    // Claim tokens
+    // TERMINATE, without deposit must create unlocked lockup for terminator
+    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    assert_eq!(res.0, 0);
+
+    ft_storage_deposit(&users.eve, TOKEN_ID, &users.eve.account_id);
+    let terminator_balance = e.ft_balance_of(&users.eve);
+    assert_eq!(terminator_balance, 0);
+
+    {
+        let lockups = e.get_account_lockups(&users.eve);
+        assert_eq!(lockups.len(), 1);
+        assert_eq!(lockups[0].1.claimed_balance, 0);
+        assert_eq!(lockups[0].1.unclaimed_balance, amount * 2 / 3);
+        let terminator_lockup_index = lockups[0].0;
+
+        // Claim from lockup refund
+        let res: WrappedBalance = e.claim(&users.eve).unwrap_json();
+        assert_eq!(res.0, amount * 2 / 3);
+        let balance = e.ft_balance_of(&users.eve);
+        assert_eq!(balance, amount * 2 / 3);
+
+        // Terminator's lockups should be empty, since fully claimed.
+        let lockups = e.get_account_lockups(&users.eve);
+        assert!(lockups.is_empty());
+
+        // Manually checking the terminator's lockup by index
+        let lockup = e.get_lockup(terminator_lockup_index);
+        assert_eq!(lockup.claimed_balance, amount * 2 / 3);
+        assert_eq!(lockup.unclaimed_balance, 0);
+    }
+
+    {
+        let lockups = e.get_account_lockups(&users.alice);
+        assert_eq!(lockups.len(), 1);
+        assert_eq!(lockups[0].1.claimed_balance, 0);
+        assert_eq!(lockups[0].1.unclaimed_balance, amount / 3);
+
+        // Claim by user
+        ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
+        let balance = e.ft_balance_of(&users.alice);
+        assert_eq!(balance, 0);
+
+        let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
+        assert_eq!(res.0, amount / 3);
+        let balance = e.ft_balance_of(&users.alice);
+        assert_eq!(balance, amount / 3);
+
+        // User's lockups should be empty, since fully claimed.
+        let lockups = e.get_account_lockups(&users.eve);
+        assert!(lockups.is_empty());
+
+        // Manually checking the terminator's lockup by index
+        let lockup = e.get_lockup(lockup_index);
+        assert_eq!(lockup.claimed_balance, amount / 3);
+        assert_eq!(lockup.unclaimed_balance, 0);
+    }
+}
