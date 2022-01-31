@@ -344,7 +344,7 @@ fn test_lockup_cliff_amazon() {
 }
 
 #[test]
-fn test_lockup_linear_with_same_termination_schedule() {
+fn test_lockup_terminate_no_vesting_schedule() {
     let e = Env::init(None);
     let users = Users::init(&e);
     let amount = d(60000, TOKEN_DECIMALS);
