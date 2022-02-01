@@ -520,7 +520,7 @@ fn test_lockup_terminate_no_storage() {
         assert_eq!(balance, amount / 3);
 
         // User's lockups should be empty, since fully claimed.
-        let lockups = e.get_account_lockups(&users.eve);
+        let lockups = e.get_account_lockups(&users.alice);
         assert!(lockups.is_empty());
 
         // Manually checking the terminator's lockup by index
