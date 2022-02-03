@@ -101,7 +101,8 @@ impl Contract {
         let mut total_unclaimed_balance = 0;
         for (lockup_index, mut lockup) in lockups {
             let lockup_claim = lockup.claim(lockup_index);
-            if lockup_claim.unclaimed_balance.0 > 0 {
+            // allow clean up of zero amount lockups
+            if lockup_claim.unclaimed_balance.0 > 0 || lockup_claim.is_final {
                 log!(
                     "Claiming {} form lockup #{}",
                     lockup_claim.unclaimed_balance.0,
