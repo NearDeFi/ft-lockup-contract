@@ -152,6 +152,15 @@ impl Contract {
             .expect("Lockup not found");
         let unvested_balance = lockup.terminate(&account_id, hashed_schedule);
         self.lockups.replace(lockup_index as _, &lockup);
+
+        // no need to store empty lockup
+        if lockup.schedule.total_balance() == 0 {
+            let lockup_account_id: AccountId = lockup.account_id.into();
+            let mut indices = self.account_lockups.get(&lockup_account_id).unwrap_or_default();
+            indices.remove(&lockup_index);
+            self.internal_save_account_lockups(&lockup_account_id, indices);
+        }
+
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
                 account_id.clone(),
