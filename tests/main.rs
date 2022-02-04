@@ -341,3 +341,48 @@ fn test_lockup_cliff_amazon() {
     assert_eq!(lockup.claimed_balance, amount);
     assert_eq!(lockup.unclaimed_balance, 0);
 }
+
+fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
+    let lockup_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount * 3 / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 + 1,
+            balance: amount,
+        },
+    ]);
+    let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    (lockup_schedule, vesting_schedule)
+}
+
+#[test]
+fn test_hash_schedule() {
+    let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
+    assert_eq!(
+        e.hash_schedule(&vesting_schedule),
+        e.hash_schedule(&vesting_schedule)
+    );
+    assert_ne!(
+        e.hash_schedule(&vesting_schedule),
+        e.hash_schedule(&lockup_schedule),
+    );
+}
