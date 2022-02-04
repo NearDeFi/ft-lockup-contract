@@ -88,11 +88,12 @@ impl Contract {
         self.deposit_whitelist.to_vec()
     }
 
-    pub fn hash_schedule(schedule: Schedule) -> Base58CryptoHash {
+    pub fn hash_schedule(&self, schedule: Schedule) -> Base58CryptoHash {
         schedule.hash().into()
     }
 
     pub fn validate_schedule(
+        &self,
         schedule: Schedule,
         total_balance: WrappedBalance,
         termination_schedule: Option<Schedule>,
