@@ -4,7 +4,7 @@ use near_sdk::serde_json::json;
 use near_sdk::{env, serde_json, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
 use near_sdk_sim::{
-    deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount,
+    deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 
 pub use ft_lockup::lockup::{Lockup, LockupIndex};
@@ -179,6 +179,22 @@ impl Env {
         self.near
             .view_method_call(self.contract.contract.hash_schedule(schedule.clone()))
             .unwrap_json()
+    }
+
+    pub fn validate_schedule(
+        &self,
+        schedule: &Schedule,
+        total_balance: WrappedBalance,
+        termination_schedule: Option<&Schedule>,
+    ) -> ViewResult {
+        self.near
+            .view_method_call(
+                self.contract.contract.validate_schedule(
+                    schedule.clone(),
+                    total_balance,
+                    termination_schedule.map(|x| x.clone()),
+                )
+            )
     }
 
     pub fn get_account_lockups(&self, user: &UserAccount) -> Vec<(LockupIndex, LockupView)> {
