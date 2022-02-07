@@ -299,6 +299,28 @@ impl Env {
         )
     }
 
+    pub fn get_num_lockups(&self) -> u32 {
+        self.near
+            .view_method_call(self.contract.contract.get_num_lockups())
+            .unwrap_json()
+    }
+
+    pub fn get_lockups(&self, indices: &Vec<LockupIndex>) -> Vec<(LockupIndex, LockupView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_lockups(indices.clone()))
+            .unwrap_json()
+    }
+
+    pub fn get_lockups_paged(
+        &self,
+        from_index: Option<LockupIndex>,
+        limit: Option<LockupIndex>,
+    ) -> Vec<(LockupIndex, LockupView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_lockups_paged(from_index, limit))
+            .unwrap_json()
+    }
+
     pub fn get_deposit_whitelist(&self) -> Vec<AccountId> {
         self.near
             .view_method_call(self.contract.contract.get_deposit_whitelist())
