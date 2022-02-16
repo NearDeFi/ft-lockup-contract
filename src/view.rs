@@ -1,4 +1,5 @@
 use crate::*;
+use std::convert::TryInto;
 
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -47,6 +48,10 @@ impl From<Lockup> for LockupView {
 
 #[near_bindgen]
 impl Contract {
+    pub fn get_token_account_id(&self) -> ValidAccountId {
+        self.token_account_id.clone().try_into().unwrap()
+    }
+
     pub fn get_account_lockups(
         &self,
         account_id: ValidAccountId,

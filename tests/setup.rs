@@ -347,6 +347,12 @@ impl Env {
             ))
     }
 
+    pub fn get_token_account_id(&self) -> ValidAccountId {
+        self.near
+            .view_method_call(self.contract.contract.get_token_account_id())
+            .unwrap_json()
+    }
+
     pub fn get_account_lockups(&self, user: &UserAccount) -> Vec<(LockupIndex, LockupView)> {
         self.near
             .view_method_call(

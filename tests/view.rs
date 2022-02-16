@@ -105,3 +105,11 @@ fn test_get_lockups() {
     assert_eq!(res[1].1.account_id, users.bob.valid_account_id());
     assert_eq!(res[2].1.account_id, users.charlie.valid_account_id());
 }
+
+#[test]
+fn test_get_token_account_id() {
+    let e = Env::init(None);
+
+    let result = e.get_token_account_id();
+    assert_eq!(result, e.token.valid_account_id());
+}
