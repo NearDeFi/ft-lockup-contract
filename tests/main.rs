@@ -2,8 +2,8 @@ mod setup;
 
 use crate::setup::*;
 use ft_lockup::lockup::Lockup;
-use ft_lockup::termination::TerminationConfig;
 use ft_lockup::schedule::{Checkpoint, Schedule};
+use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
 use near_sdk::json_types::WrappedBalance;
 
 const ONE_DAY_SEC: TimestampSec = 24 * 60 * 60;
@@ -341,6 +341,100 @@ fn test_lockup_cliff_amazon() {
     let lockup = e.get_lockup(0);
     assert_eq!(lockup.claimed_balance, amount);
     assert_eq!(lockup.unclaimed_balance, 0);
+}
+
+fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
+    let lockup_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 - 1,
+            balance: amount * 3 / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    (lockup_schedule, vesting_schedule)
+}
+
+#[test]
+fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    let amount = d(60000, TOKEN_DECIMALS);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert!(lockups.is_empty());
+
+    let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
+    let lockup = Lockup {
+        account_id: users.alice.valid_account_id(),
+        schedule: lockup_schedule,
+        claimed_balance: 0,
+        termination_config: Some(TerminationConfig {
+            terminator_id: users.eve.valid_account_id(),
+            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        }),
+    };
+
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    assert_eq!(balance.0, amount);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert_eq!(lockups.len(), 1);
+    let lockup_index = lockups[0].0;
+
+    // 1Y - 1 before cliff termination
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert_eq!(lockups[0].1.total_balance, amount);
+    assert_eq!(lockups[0].1.claimed_balance, 0);
+    assert_eq!(lockups[0].1.unclaimed_balance, 0);
+
+    // TERMINATE
+    ft_storage_deposit(&users.eve, TOKEN_ID, &users.eve.account_id);
+    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    assert_eq!(res.0, amount);
+
+    let terminator_balance = e.ft_balance_of(&users.eve);
+    assert_eq!(terminator_balance, amount);
+
+    // Checking lockup
+
+    // after ALL the schedules have finished
+
+    let lockups = e.get_account_lockups(&users.alice);
+    assert!(lockups.is_empty());
+
+    let lockup = e.get_lockup(lockup_index);
+    assert_eq!(lockup.total_balance, 0);
+    assert_eq!(lockup.claimed_balance, 0);
+    assert_eq!(lockup.unclaimed_balance, 0);
+
+    // Trying to claim
+    ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
+    let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
+    assert_eq!(res.0, 0);
+
+    let balance = e.ft_balance_of(&users.alice);
+    assert_eq!(balance, 0);
 }
 
 #[test]
