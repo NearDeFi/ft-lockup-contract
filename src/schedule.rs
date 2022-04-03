@@ -121,11 +121,11 @@ impl Schedule {
                 let balance_diff = checkpoint.balance - prev_checkpoint.balance;
                 let required_balance_diff = new_total_balance - prev_checkpoint.balance;
                 // Computing the new timestamp rounding up
-                let new_timestamp = ((U256::from(timestamp_diff)
-                    * U256::from(required_balance_diff)
-                    + U256::from(balance_diff - 1))
-                    / U256::from(balance_diff))
-                .as_u32();
+                let new_timestamp = prev_checkpoint.timestamp
+                    + ((U256::from(timestamp_diff) * U256::from(required_balance_diff)
+                        + U256::from(balance_diff - 1))
+                        / U256::from(balance_diff))
+                    .as_u32();
                 self.0.push(Checkpoint {
                     timestamp: new_timestamp,
                     balance: new_total_balance,
