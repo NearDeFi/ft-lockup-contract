@@ -1,13 +1,14 @@
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
-use near_sdk::json_types::{ValidAccountId, WrappedBalance};
+use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
 use near_sdk::{env, serde_json, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
 use near_sdk_sim::{
-    deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount,
+    deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 
 pub use ft_lockup::lockup::{Lockup, LockupIndex};
+pub use ft_lockup::schedule::Schedule;
 use ft_lockup::view::LockupView;
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
@@ -25,6 +26,7 @@ pub const T_GAS: Gas = 10u64.pow(12);
 pub const DEFAULT_GAS: Gas = 15 * T_GAS;
 pub const MAX_GAS: Gas = 300 * T_GAS;
 pub const CLAIM_GAS: Gas = 100 * T_GAS;
+pub const TERMINATE_GAS: Gas = 100 * T_GAS;
 
 pub const TOKEN_DECIMALS: u8 = 18;
 pub const TOKEN_TOTAL_SUPPLY: Balance = d(1_000_000, TOKEN_DECIMALS);
@@ -172,6 +174,34 @@ impl Env {
 
     pub fn claim(&self, user: &UserAccount) -> ExecutionResult {
         user.function_call(self.contract.contract.claim(), CLAIM_GAS, 0)
+    }
+
+    pub fn terminate(&self, user: &UserAccount, lockup_index: LockupIndex) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.terminate(lockup_index, None),
+            TERMINATE_GAS,
+            0,
+        )
+    }
+
+    pub fn hash_schedule(&self, schedule: &Schedule) -> Base58CryptoHash {
+        self.near
+            .view_method_call(self.contract.contract.hash_schedule(schedule.clone()))
+            .unwrap_json()
+    }
+
+    pub fn validate_schedule(
+        &self,
+        schedule: &Schedule,
+        total_balance: WrappedBalance,
+        termination_schedule: Option<&Schedule>,
+    ) -> ViewResult {
+        self.near
+            .view_method_call(self.contract.contract.validate_schedule(
+                schedule.clone(),
+                total_balance,
+                termination_schedule.map(|x| x.clone()),
+            ))
     }
 
     pub fn get_account_lockups(&self, user: &UserAccount) -> Vec<(LockupIndex, LockupView)> {
