@@ -1,5 +1,5 @@
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
-use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
+pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
 use near_sdk::{env, serde_json, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
@@ -8,7 +8,8 @@ use near_sdk_sim::{
 };
 
 pub use ft_lockup::lockup::{Lockup, LockupIndex};
-pub use ft_lockup::schedule::Schedule;
+pub use ft_lockup::schedule::{Checkpoint, Schedule};
+pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
 use ft_lockup::view::LockupView;
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
@@ -16,6 +17,11 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     FT_LOCKUP_WASM_BYTES => "res/ft_lockup.wasm",
     FUNGIBLE_TOKEN_WASM_BYTES => "res/fungible_token.wasm",
 }
+
+pub const ONE_DAY_SEC: TimestampSec = 24 * 60 * 60;
+pub const ONE_YEAR_SEC: TimestampSec = 365 * ONE_DAY_SEC;
+
+pub const GENESIS_TIMESTAMP_SEC: TimestampSec = 1_600_000_000;
 
 pub const NEAR: &str = "near";
 pub const TOKEN_ID: &str = "token.near";
@@ -45,6 +51,70 @@ pub struct Users {
     pub charlie: UserAccount,
     pub dude: UserAccount,
     pub eve: UserAccount,
+}
+
+pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
+    let lockup_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 - 1,
+            balance: amount * 3 / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    (lockup_schedule, vesting_schedule)
+}
+
+pub fn lockup_vesting_schedule_2(amount: u128) -> (Schedule, Schedule) {
+    let lockup_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount * 3 / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 + 1,
+            balance: amount,
+        },
+    ]);
+    let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    (lockup_schedule, vesting_schedule)
 }
 
 pub fn storage_deposit(

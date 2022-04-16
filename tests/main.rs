@@ -1,15 +1,6 @@
 mod setup;
 
 use crate::setup::*;
-use ft_lockup::lockup::Lockup;
-use ft_lockup::schedule::{Checkpoint, Schedule};
-use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
-use near_sdk::json_types::WrappedBalance;
-
-const ONE_DAY_SEC: TimestampSec = 24 * 60 * 60;
-const ONE_YEAR_SEC: TimestampSec = 365 * ONE_DAY_SEC;
-
-const GENESIS_TIMESTAMP_SEC: TimestampSec = 1_600_000_000;
 
 #[test]
 fn test_init_env() {
@@ -343,38 +334,6 @@ fn test_lockup_cliff_amazon() {
     assert_eq!(lockup.unclaimed_balance, 0);
 }
 
-fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
-    let lockup_schedule = Schedule(vec![
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
-            balance: 0,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 - 1,
-            balance: amount * 3 / 4,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
-            balance: amount,
-        },
-    ]);
-    let vesting_schedule = Schedule(vec![
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
-            balance: 0,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
-            balance: amount / 4,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
-            balance: amount,
-        },
-    ]);
-    (lockup_schedule, vesting_schedule)
-}
-
 #[test]
 fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     let e = Env::init(None);
@@ -529,38 +488,6 @@ fn test_lockup_linear_with_same_termination_schedule() {
     let lockup = e.get_lockup(0);
     assert_eq!(lockup.claimed_balance, amount / 2);
     assert_eq!(lockup.unclaimed_balance, 0);
-}
-
-fn lockup_vesting_schedule_2(amount: u128) -> (Schedule, Schedule) {
-    let lockup_schedule = Schedule(vec![
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
-            balance: 0,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
-            balance: amount * 3 / 4,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 + 1,
-            balance: amount,
-        },
-    ]);
-    let vesting_schedule = Schedule(vec![
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
-            balance: 0,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
-            balance: amount / 4,
-        },
-        Checkpoint {
-            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
-            balance: amount,
-        },
-    ]);
-    (lockup_schedule, vesting_schedule)
 }
 
 #[test]
