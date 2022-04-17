@@ -98,29 +98,29 @@ impl Contract {
         }
 
         let mut lockup_claims = vec![];
-        let mut total_unclaimed_balance = 0;
+        let mut total_balance_to_claim = 0;
         for (lockup_index, mut lockup) in lockups {
             let lockup_claim = lockup.claim(lockup_index);
-            if lockup_claim.unclaimed_balance.0 > 0 {
+            if lockup_claim.balance_to_claim.0 > 0 {
                 log!(
                     "Claiming {} form lockup #{}",
-                    lockup_claim.unclaimed_balance.0,
+                    lockup_claim.balance_to_claim.0,
                     lockup_index
                 );
-                total_unclaimed_balance += lockup_claim.unclaimed_balance.0;
+                total_balance_to_claim += lockup_claim.balance_to_claim.0;
                 self.lockups.replace(lockup_index as _, &lockup);
                 lockup_claims.push(lockup_claim);
             }
         }
-        log!("Total claim {}", total_unclaimed_balance);
+        log!("Total claim {}", total_balance_to_claim);
 
-        if total_unclaimed_balance > 0 {
+        if total_balance_to_claim > 0 {
             ext_fungible_token::ft_transfer(
                 account_id.clone(),
-                total_unclaimed_balance.into(),
+                total_balance_to_claim.into(),
                 Some(format!(
                     "Claiming unlocked {} balance from {}",
-                    total_unclaimed_balance,
+                    total_balance_to_claim,
                     env::current_account_id()
                 )),
                 &self.token_account_id,
