@@ -12,12 +12,9 @@ pub struct LockupClaim {
     pub is_final: bool,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Deserialize)]
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(
-    not(target_arch = "wasm32"),
-    derive(Debug, PartialEq, Clone, Serialize)
-)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct Lockup {
     pub account_id: ValidAccountId,
     pub schedule: Schedule,

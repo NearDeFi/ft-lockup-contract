@@ -9,10 +9,11 @@ use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 
+pub use ft_lockup::draft::{Draft, DraftGroupIndex, DraftIndex};
 pub use ft_lockup::lockup::{Lockup, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
 pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
-use ft_lockup::view::LockupView;
+use ft_lockup::view::{DraftGroupView, DraftView, LockupView};
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
@@ -299,6 +300,18 @@ impl Env {
         )
     }
 
+    pub fn create_draft_group(&self, user: &UserAccount) -> ExecutionResult {
+        user.function_call(self.contract.contract.create_draft_group(), DEFAULT_GAS, 0)
+    }
+
+    pub fn create_draft(&self, user: &UserAccount, draft: &Draft) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.create_draft(draft.clone()),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
     pub fn get_num_lockups(&self) -> u32 {
         self.near
             .view_method_call(self.contract.contract.get_num_lockups())
@@ -350,6 +363,38 @@ impl Env {
     pub fn get_token_account_id(&self) -> ValidAccountId {
         self.near
             .view_method_call(self.contract.contract.get_token_account_id())
+            .unwrap_json()
+    }
+
+    pub fn get_draft_group(&self, index: DraftGroupIndex) -> Option<DraftGroupView> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft_group(index))
+            .unwrap_json()
+    }
+
+    pub fn get_draft_groups_paged(
+        &self,
+        from_index: Option<DraftGroupIndex>,
+        to_index: Option<DraftGroupIndex>,
+    ) -> Vec<(DraftGroupIndex, DraftGroupView)> {
+        self.near
+            .view_method_call(
+                self.contract
+                    .contract
+                    .get_draft_groups_paged(from_index, to_index),
+            )
+            .unwrap_json()
+    }
+
+    pub fn get_draft(&self, index: DraftIndex) -> Option<DraftView> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft(index))
+            .unwrap_json()
+    }
+
+    pub fn get_drafts(&self, indices: Vec<DraftIndex>) -> Vec<(DraftIndex, DraftView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_drafts(indices))
             .unwrap_json()
     }
 
