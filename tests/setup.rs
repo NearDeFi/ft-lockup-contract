@@ -10,6 +10,7 @@ use near_sdk_sim::{
 };
 
 pub use ft_lockup::draft::{Draft, DraftGroupIndex, DraftIndex};
+use ft_lockup::ft_token_receiver::DraftGroupFunding;
 pub use ft_lockup::lockup::{Lockup, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
 pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
@@ -215,6 +216,26 @@ impl Env {
         }
     }
 
+    pub fn ft_transfer(
+        &self,
+        sender: &UserAccount,
+        amount: Balance,
+        receiver: &UserAccount,
+    ) -> ExecutionResult {
+        sender.call(
+            self.token.account_id.clone(),
+            "ft_transfer",
+            &json!({
+                "receiver_id": receiver.valid_account_id(),
+                "amount": WrappedBalance::from(amount),
+            })
+            .to_string()
+            .into_bytes(),
+            MAX_GAS,
+            1,
+        )
+    }
+
     pub fn ft_transfer_call(
         &self,
         user: &UserAccount,
@@ -243,6 +264,16 @@ impl Env {
         lockup: &Lockup,
     ) -> ExecutionResult {
         self.ft_transfer_call(user, amount, &serde_json::to_string(lockup).unwrap())
+    }
+
+    pub fn fund_draft_group(
+        &self,
+        user: &UserAccount,
+        amount: Balance,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        let funding = DraftGroupFunding { draft_group_id };
+        self.ft_transfer_call(user, amount, &serde_json::to_string(&funding).unwrap())
     }
 
     pub fn claim(&self, user: &UserAccount) -> ExecutionResult {

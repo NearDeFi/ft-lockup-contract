@@ -225,9 +225,11 @@ impl Contract {
             .draft_groups
             .get(draft.draft_group_id as _)
             .expect("draft group not found");
+        draft_group.assert_can_add_draft();
 
         let index: DraftIndex = self.drafts.len() as _;
         self.drafts.push(&draft);
+        draft_group.total_amount += draft.lockup.schedule.total_balance();
         draft_group.draft_indices.insert(index);
         self.draft_groups
             .replace(draft.draft_group_id as _, &draft_group);
