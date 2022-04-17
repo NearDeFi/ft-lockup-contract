@@ -237,6 +237,13 @@ impl Contract {
         index
     }
 
+    pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
+        drafts
+            .into_iter()
+            .map(|draft| self.create_draft(draft))
+            .collect()
+    }
+
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
         let mut draft = self.drafts.get(draft_id as _).expect("draft not found");
         draft.assert_can_convert();
@@ -257,5 +264,12 @@ impl Contract {
         self.drafts.replace(draft_id as _, &draft);
 
         index
+    }
+
+    pub fn convert_drafts(&mut self, draft_ids: Vec<DraftIndex>) -> Vec<LockupIndex> {
+        draft_ids
+            .into_iter()
+            .map(|draft_id| self.convert_draft(draft_id))
+            .collect()
     }
 }

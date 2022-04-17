@@ -46,6 +46,6 @@ impl DraftGroup {
     }
 
     pub fn assert_can_convert(&self) {
-        assert!(self.funded, "cannot convert draft from not funded group",);
+        assert!(self.funded, "cannot convert draft from not funded group");
     }
 }
