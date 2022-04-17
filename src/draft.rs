@@ -8,13 +8,20 @@ pub type DraftIndex = u32;
 #[serde(crate = "near_sdk::serde")]
 pub struct Draft {
     pub draft_group_id: DraftGroupIndex,
+    pub lockup_id: Option<LockupIndex>,
     pub lockup: Lockup,
 }
 
 impl Draft {
     pub fn assert_new_valid(&self) {
+        assert_eq!(self.lockup_id, None, "new draft must not have lockup_id");
+
         let amount = self.lockup.schedule.total_balance();
         self.lockup.assert_new_valid(amount);
+    }
+
+    pub fn assert_can_convert(&self) {
+        assert!(self.lockup_id.is_none(), "draft already converted");
     }
 }
 
@@ -36,5 +43,9 @@ impl DraftGroup {
 
     pub fn assert_can_add_draft(&self) {
         assert!(!self.funded, "cannot add draft, group already funded");
+    }
+
+    pub fn assert_can_convert(&self) {
+        assert!(self.funded, "cannot convert draft from not funded group",);
     }
 }

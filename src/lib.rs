@@ -236,4 +236,26 @@ impl Contract {
 
         index
     }
+
+    pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
+        let mut draft = self.drafts.get(draft_id as _).expect("draft not found");
+        draft.assert_can_convert();
+        let draft_group = self
+            .draft_groups
+            .get(draft.draft_group_id as _)
+            .expect("draft group not found");
+        draft_group.assert_can_convert();
+
+        let index = self.internal_add_lockup(&draft.lockup);
+        log!(
+            "Created new lockup for {} with index {} from draft {}",
+            draft.lockup.account_id.as_ref(),
+            index,
+            draft_id,
+        );
+        draft.lockup_id = Some(index);
+        self.drafts.replace(draft_id as _, &draft);
+
+        index
+    }
 }

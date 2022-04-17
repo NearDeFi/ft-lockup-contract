@@ -61,6 +61,7 @@ fn test_create_draft() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
+        lockup_id: None,
         lockup,
     };
 
@@ -105,6 +106,7 @@ fn test_fund_draft_group() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
+        lockup_id: None,
         lockup,
     };
 
@@ -153,6 +155,50 @@ fn test_fund_draft_group() {
 }
 
 #[test]
+fn test_convert_draft() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let amount = d(60000, TOKEN_DECIMALS);
+    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
+    let draft_group_id = 0;
+    let draft = Draft {
+        draft_group_id,
+        lockup_id: None,
+        lockup,
+    };
+
+    e.create_draft_group(&e.owner);
+
+    // create draft 0
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(res.is_ok());
+
+    // try convert before fund
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("not funded group"));
+
+    // fund draft group
+    let res = e.fund_draft_group(&e.owner, amount, 0);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+
+    // convert by anonymous
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(res.is_ok());
+
+    let res = e.get_draft(0).unwrap();
+    assert_eq!(res.lockup_id, Some(0), "expected lockup_id to be set");
+
+    // try to convert again
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("draft already converted"));
+}
+
+#[test]
 fn test_view_drafts() {
     let e = Env::init(None);
     let users = Users::init(&e);
@@ -163,6 +209,7 @@ fn test_view_drafts() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
+        lockup_id: None,
         lockup,
     };
 
@@ -171,16 +218,57 @@ fn test_view_drafts() {
     e.create_draft(&e.owner, &draft);
     e.create_draft(&e.owner, &draft);
 
+    // fund draft group
+    let res = e.fund_draft_group(&e.owner, amount * 3, 0);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount * 3);
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(res.is_ok());
+
     let res = e.get_drafts(vec![2, 0]);
     assert_eq!(res.len(), 2);
 
     assert_eq!(res[0].0, 2);
     let draft = &res[0].1;
     assert_eq!(draft.draft_group_id, 0);
+    assert_eq!(draft.lockup_id, None);
     assert_eq!(draft.lockup.total_balance, amount);
 
     assert_eq!(res[1].0, 0);
     let draft = &res[1].1;
     assert_eq!(draft.draft_group_id, 0);
+    assert_eq!(draft.lockup_id, Some(0));
     assert_eq!(draft.lockup.total_balance, amount);
+}
+
+#[test]
+fn test_create_via_draft_and_claim() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let amount = d(60000, TOKEN_DECIMALS);
+    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
+    let draft_group_id = 0;
+    let draft = Draft {
+        draft_group_id,
+        lockup_id: None,
+        lockup,
+    };
+
+    e.create_draft_group(&e.owner);
+    e.create_draft(&e.owner, &draft);
+
+    // fund draft group
+    let res = e.fund_draft_group(&e.owner, amount, 0);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(res.is_ok());
+
+    ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
+    let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
+    assert_eq!(res.0, amount);
+    let balance = e.ft_balance_of(&users.alice);
+    assert_eq!(balance, amount);
 }
