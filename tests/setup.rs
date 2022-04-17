@@ -248,6 +248,18 @@ impl Env {
         user.function_call(self.contract.contract.claim(), CLAIM_GAS, 0)
     }
 
+    pub fn claim_lockups(
+        &self,
+        user: &UserAccount,
+        amounts: &Vec<(LockupIndex, WrappedBalance)>,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.claim_lockups(amounts.clone()),
+            CLAIM_GAS,
+            0,
+        )
+    }
+
     pub fn terminate(&self, user: &UserAccount, lockup_index: LockupIndex) -> ExecutionResult {
         user.function_call(
             self.contract.contract.terminate(lockup_index, None, None),

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use near_contract_standards::fungible_token::core_impl::ext_fungible_token;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::borsh::maybestd::collections::HashSet;
@@ -86,6 +88,67 @@ impl Contract {
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
             token_account_id: token_account_id.into(),
             deposit_whitelist: deposit_whitelist_set,
+        }
+    }
+
+    pub fn claim_lockups(
+        &mut self,
+        amounts: Vec<(LockupIndex, WrappedBalance)>,
+    ) -> PromiseOrValue<WrappedBalance> {
+        let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
+        let account_id = env::predecessor_account_id();
+
+        let mut lockup_claims = vec![];
+        let mut total_balance_to_claim = 0;
+        for (lockup_index, lockup_amount) in amounts {
+            let mut lockup = self
+                .lockups
+                .get(lockup_index as _)
+                .expect(&format!("lockup not found: {}", lockup_index));
+            assert_eq!(
+                lockup.account_id.to_string(),
+                account_id,
+                "wrong account_id for lockup {}",
+                lockup_index,
+            );
+
+            let lockup_claim = lockup.claim_balance(lockup_index, lockup_amount.0);
+            if lockup_claim.balance_to_claim.0 > 0 {
+                log!(
+                    "Claiming {} form lockup #{}",
+                    lockup_claim.balance_to_claim.0,
+                    lockup_index
+                );
+                total_balance_to_claim += lockup_claim.balance_to_claim.0;
+                self.lockups.replace(lockup_index as _, &lockup);
+                lockup_claims.push(lockup_claim);
+            }
+        }
+        log!("Total claim {}", total_balance_to_claim);
+
+        if total_balance_to_claim > 0 {
+            ext_fungible_token::ft_transfer(
+                account_id.clone(),
+                total_balance_to_claim.into(),
+                Some(format!(
+                    "Claiming unlocked {} balance from {}",
+                    total_balance_to_claim,
+                    env::current_account_id()
+                )),
+                &self.token_account_id,
+                ONE_YOCTO,
+                GAS_FOR_FT_TRANSFER,
+            )
+            .then(ext_self::after_ft_transfer(
+                account_id,
+                lockup_claims,
+                &env::current_account_id(),
+                NO_DEPOSIT,
+                GAS_FOR_AFTER_FT_TRANSFER,
+            ))
+            .into()
+        } else {
+            PromiseOrValue::Value(0.into())
         }
     }
 
