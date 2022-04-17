@@ -36,11 +36,29 @@ impl Contract {
         &self,
         account_id: &AccountId,
     ) -> Vec<(LockupIndex, Lockup)> {
-        self.account_lockups
-            .get(account_id)
-            .unwrap_or_default()
-            .into_iter()
-            .map(|lockup_index| (lockup_index, self.lockups.get(lockup_index as _).unwrap()))
+        let lockup_ids = self.account_lockups.get(account_id).unwrap_or_default();
+        self.internal_get_account_lockups_by_id(&account_id, &lockup_ids)
+    }
+
+    pub(crate) fn internal_get_account_lockups_by_id(
+        &self,
+        account_id: &AccountId,
+        lockup_ids: &HashSet<LockupIndex>,
+    ) -> Vec<(LockupIndex, Lockup)> {
+        let account_lockup_ids = self.account_lockups.get(account_id).unwrap_or_default();
+
+        lockup_ids
+            .iter()
+            .map(|&x| x)
+            .map(|lockup_index| {
+                assert!(
+                    account_lockup_ids.contains(&lockup_index),
+                    "lockup not found for account: {}",
+                    lockup_index,
+                );
+                let lockup = self.lockups.get(lockup_index as _).unwrap();
+                (lockup_index.clone(), lockup)
+            })
             .collect()
     }
 }

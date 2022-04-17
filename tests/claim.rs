@@ -422,6 +422,12 @@ fn test_claim_lockups_with_specific_amounts_fail() {
     // Set time to half unlock
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 2);
 
+    // CLAIM not existing lockup
+    let res = e.claim_lockups(&users.bob, &vec![(9, (amount / 3).into())]);
+    assert!(!res.is_ok());
+    println!("{:#?}", res);
+    assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
+
     ft_storage_deposit(&users.bob, TOKEN_ID, &users.alice.account_id);
 
     // CLAIM by wrong user
@@ -430,7 +436,7 @@ fn test_claim_lockups_with_specific_amounts_fail() {
         &vec![(1, (amount / 3).into()), (0, (amount / 4).into())],
     );
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("wrong account_id for lockup"));
+    assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
 
     // CLAIM before storage deposit
     let res = e.claim_lockups(

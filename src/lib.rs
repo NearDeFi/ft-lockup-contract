@@ -96,23 +96,19 @@ impl Contract {
         amounts: Vec<(LockupIndex, WrappedBalance)>,
     ) -> PromiseOrValue<WrappedBalance> {
         let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
+
         let account_id = env::predecessor_account_id();
+        let mut lockups_by_id: HashMap<LockupIndex, Lockup> = self
+            .internal_get_account_lockups_by_id(&account_id, &amounts.keys().map(|&x| x).collect())
+            .into_iter()
+            .collect();
 
         let mut lockup_claims = vec![];
         let mut total_balance_to_claim = 0;
         for (lockup_index, lockup_amount) in amounts {
-            let mut lockup = self
-                .lockups
-                .get(lockup_index as _)
-                .expect(&format!("lockup not found: {}", lockup_index));
-            assert_eq!(
-                lockup.account_id.to_string(),
-                account_id,
-                "wrong account_id for lockup {}",
-                lockup_index,
-            );
-
+            let lockup = lockups_by_id.get_mut(&lockup_index).unwrap();
             let lockup_claim = lockup.claim_balance(lockup_index, lockup_amount.0);
+
             if lockup_claim.balance_to_claim.0 > 0 {
                 log!(
                     "Claiming {} form lockup #{}",
