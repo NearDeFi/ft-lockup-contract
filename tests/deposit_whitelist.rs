@@ -34,7 +34,6 @@ fn test_deposit_whitelist_get() {
     let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
-    // not increased
     assert_eq!(lockups.len(), 1);
 
     // user from whitelist can add other users

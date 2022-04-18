@@ -180,7 +180,7 @@ fn test_lockup_terminate_wrong_terminator() {
 }
 
 #[test]
-fn test_lockup_terminate_no_storage() {
+fn test_lockup_terminate_with_no_token_storage_deposit() {
     let e = Env::init(None);
     let users = Users::init(&e);
     let amount = d(60000, TOKEN_DECIMALS);
@@ -223,6 +223,7 @@ fn test_lockup_terminate_no_storage() {
     let terminator_balance = e.ft_balance_of(&users.eve);
     assert_eq!(terminator_balance, 0);
 
+    // claiming balance from newly created lockup for terminator
     {
         let lockups = e.get_account_lockups(&users.eve);
         assert_eq!(lockups.len(), 1);
@@ -246,6 +247,7 @@ fn test_lockup_terminate_no_storage() {
         assert_eq!(lockup.unclaimed_balance, 0);
     }
 
+    // claiming vested balance for beneficiary
     {
         let lockups = e.get_account_lockups(&users.alice);
         assert_eq!(lockups.len(), 1);
@@ -704,7 +706,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
     assert_eq!(lockups.len(), 1);
     let lockup_index = lockups[0].0;
 
-    // 2Y + Y * 2 / 3, 1/8 unlocked
+    // 2Y + Y * 2 / 3, 1/4 unlocked
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2 + ONE_YEAR_SEC * 2 / 3);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups[0].1.total_balance, amount);
@@ -716,7 +718,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
     let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
     assert_eq!(res.0, amount / 4);
 
-    // TERMINATE, 3Y + Y / 3, 5/6 unlocked
+    // TERMINATE, 3Y + Y / 3, 5/6 vested
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 3 + ONE_YEAR_SEC / 3);
     ft_storage_deposit(&users.eve, TOKEN_ID, &users.eve.account_id);
     let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
