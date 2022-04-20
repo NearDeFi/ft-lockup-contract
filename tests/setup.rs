@@ -1,14 +1,17 @@
+#![allow(dead_code)]
+
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
-use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
+pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
-use near_sdk::{env, serde_json, Balance, Gas, Timestamp};
+use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
 use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 
 pub use ft_lockup::lockup::{Lockup, LockupIndex};
-pub use ft_lockup::schedule::Schedule;
+pub use ft_lockup::schedule::{Checkpoint, Schedule};
+pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
 use ft_lockup::view::LockupView;
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
@@ -16,6 +19,11 @@ near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
     FT_LOCKUP_WASM_BYTES => "res/ft_lockup.wasm",
     FUNGIBLE_TOKEN_WASM_BYTES => "res/fungible_token.wasm",
 }
+
+pub const ONE_DAY_SEC: TimestampSec = 24 * 60 * 60;
+pub const ONE_YEAR_SEC: TimestampSec = 365 * ONE_DAY_SEC;
+
+pub const GENESIS_TIMESTAMP_SEC: TimestampSec = 1_600_000_000;
 
 pub const NEAR: &str = "near";
 pub const TOKEN_ID: &str = "token.near";
@@ -45,6 +53,70 @@ pub struct Users {
     pub charlie: UserAccount,
     pub dude: UserAccount,
     pub eve: UserAccount,
+}
+
+pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
+    let lockup_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount * 3 / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 + 1,
+            balance: amount,
+        },
+    ]);
+    let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    (lockup_schedule, vesting_schedule)
+}
+
+pub fn lockup_vesting_schedule_2(amount: u128) -> (Schedule, Schedule) {
+    let lockup_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount * 3 / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4 + 1,
+            balance: amount,
+        },
+    ]);
+    let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount / 4,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4,
+            balance: amount,
+        },
+    ]);
+    (lockup_schedule, vesting_schedule)
 }
 
 pub fn storage_deposit(
@@ -184,6 +256,77 @@ impl Env {
         )
     }
 
+    pub fn terminate_with_schedule(
+        &self,
+        user: &UserAccount,
+        lockup_index: LockupIndex,
+        hashed_schedule: Schedule,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .terminate(lockup_index, Some(hashed_schedule)),
+            TERMINATE_GAS,
+            0,
+        )
+    }
+
+    pub fn remove_from_deposit_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .remove_from_deposit_whitelist(account_id.clone()),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn add_to_deposit_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .add_to_deposit_whitelist(account_id.clone()),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn get_num_lockups(&self) -> u32 {
+        self.near
+            .view_method_call(self.contract.contract.get_num_lockups())
+            .unwrap_json()
+    }
+
+    pub fn get_lockups(&self, indices: &Vec<LockupIndex>) -> Vec<(LockupIndex, LockupView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_lockups(indices.clone()))
+            .unwrap_json()
+    }
+
+    pub fn get_lockups_paged(
+        &self,
+        from_index: Option<LockupIndex>,
+        limit: Option<LockupIndex>,
+    ) -> Vec<(LockupIndex, LockupView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_lockups_paged(from_index, limit))
+            .unwrap_json()
+    }
+
+    pub fn get_deposit_whitelist(&self) -> Vec<AccountId> {
+        self.near
+            .view_method_call(self.contract.contract.get_deposit_whitelist())
+            .unwrap_json()
+    }
+
     pub fn hash_schedule(&self, schedule: &Schedule) -> Base58CryptoHash {
         self.near
             .view_method_call(self.contract.contract.hash_schedule(schedule.clone()))
@@ -202,6 +345,12 @@ impl Env {
                 total_balance,
                 termination_schedule.map(|x| x.clone()),
             ))
+    }
+
+    pub fn get_token_account_id(&self) -> ValidAccountId {
+        self.near
+            .view_method_call(self.contract.contract.get_token_account_id())
+            .unwrap_json()
     }
 
     pub fn get_account_lockups(&self, user: &UserAccount) -> Vec<(LockupIndex, LockupView)> {

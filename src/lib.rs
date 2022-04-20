@@ -156,7 +156,10 @@ impl Contract {
         // no need to store empty lockup
         if lockup.schedule.total_balance() == 0 {
             let lockup_account_id: AccountId = lockup.account_id.into();
-            let mut indices = self.account_lockups.get(&lockup_account_id).unwrap_or_default();
+            let mut indices = self
+                .account_lockups
+                .get(&lockup_account_id)
+                .unwrap_or_default();
             indices.remove(&lockup_index);
             self.internal_save_account_lockups(&lockup_account_id, indices);
         }
