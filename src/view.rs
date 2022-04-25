@@ -167,7 +167,7 @@ impl Contract {
     }
 
     pub fn get_draft(&self, index: DraftIndex) -> Option<DraftView> {
-        self.drafts.get(index as _).map(|draft| draft.into())
+        self.drafts.get(&index as _).map(|draft| draft.into())
     }
 
     pub fn get_drafts(&self, indices: Vec<DraftIndex>) -> Vec<(DraftIndex, DraftView)> {

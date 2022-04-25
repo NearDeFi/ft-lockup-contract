@@ -69,7 +69,8 @@ pub struct Contract {
     /// Account IDs that can create new lockups.
     pub deposit_whitelist: UnorderedSet<AccountId>,
 
-    pub drafts: Vector<Draft>,
+    pub next_draft_id: DraftIndex,
+    pub drafts: LookupMap<DraftIndex, Draft>,
     pub draft_groups: Vector<DraftGroup>,
 }
 
@@ -93,7 +94,8 @@ impl Contract {
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
             token_account_id: token_account_id.into(),
             deposit_whitelist: deposit_whitelist_set,
-            drafts: Vector::new(StorageKey::Drafts),
+            next_draft_id: 0,
+            drafts: LookupMap::new(StorageKey::Drafts),
             draft_groups: Vector::new(StorageKey::DraftGroups),
         }
     }
@@ -227,8 +229,10 @@ impl Contract {
             .expect("draft group not found");
         draft_group.assert_can_add_draft();
 
-        let index: DraftIndex = self.drafts.len() as _;
-        self.drafts.push(&draft);
+        let index = self.next_draft_id;
+        self.next_draft_id += 1;
+        assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
+
         draft_group.total_amount += draft.lockup.schedule.total_balance();
         draft_group.draft_indices.insert(index);
         self.draft_groups
@@ -245,7 +249,7 @@ impl Contract {
     }
 
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
-        let mut draft = self.drafts.get(draft_id as _).expect("draft not found");
+        let mut draft = self.drafts.get(&draft_id as _).expect("draft not found");
         draft.assert_can_convert();
         let draft_group = self
             .draft_groups
@@ -261,7 +265,7 @@ impl Contract {
             draft_id,
         );
         draft.lockup_id = Some(index);
-        self.drafts.replace(draft_id as _, &draft);
+        assert!(self.drafts.insert(&draft_id as _, &draft).is_some(), "Invariant");
 
         index
     }
