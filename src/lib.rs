@@ -249,8 +249,7 @@ impl Contract {
     }
 
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
-        let mut draft = self.drafts.get(&draft_id as _).expect("draft not found");
-        draft.assert_can_convert();
+        let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
         let draft_group = self
             .draft_groups
             .get(draft.draft_group_id as _)
@@ -264,8 +263,6 @@ impl Contract {
             index,
             draft_id,
         );
-        draft.lockup_id = Some(index);
-        assert!(self.drafts.insert(&draft_id as _, &draft).is_some(), "Invariant");
 
         index
     }

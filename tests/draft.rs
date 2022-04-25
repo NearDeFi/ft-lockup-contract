@@ -61,7 +61,6 @@ fn test_create_draft() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_id: None,
         lockup,
     };
 
@@ -109,7 +108,6 @@ fn test_create_drafts_batch() {
             let draft_group_id = 0;
             Draft {
                 draft_group_id,
-                lockup_id: None,
                 lockup,
             }
         })
@@ -146,7 +144,6 @@ fn test_fund_draft_group() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_id: None,
         lockup,
     };
 
@@ -205,7 +202,6 @@ fn test_convert_draft() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_id: None,
         lockup,
     };
 
@@ -228,14 +224,20 @@ fn test_convert_draft() {
     // convert by anonymous
     let res = e.convert_draft(&users.bob, 0);
     assert!(res.is_ok());
+    let res: DraftIndex = res.unwrap_json();
+    assert_eq!(res, 0);
 
-    let res = e.get_draft(0).unwrap();
-    assert_eq!(res.lockup_id, Some(0), "expected lockup_id to be set");
+    let res = e.get_draft(0);
+    assert!(res.is_none(), "expected converted draft to be deleted");
+
+    let lockup = e.get_lockup(0);
+    assert_eq!(lockup.account_id, users.alice.valid_account_id());
+    assert_eq!(lockup.total_balance, amount);
 
     // try to convert again
     let res = e.convert_draft(&users.bob, 0);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("draft already converted"));
+    assert!(format!("{:?}", res.status()).contains("draft not found"));
 }
 
 #[test]
@@ -252,7 +254,6 @@ fn test_convert_drafts_batch() {
             let draft_group_id = 0;
             Draft {
                 draft_group_id,
-                lockup_id: None,
                 lockup,
             }
         })
@@ -292,7 +293,6 @@ fn test_view_drafts() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_id: None,
         lockup,
     };
 
@@ -309,18 +309,10 @@ fn test_view_drafts() {
     assert!(res.is_ok());
 
     let res = e.get_drafts(vec![2, 0]);
-    assert_eq!(res.len(), 2);
-
+    assert_eq!(res.len(), 1);
     assert_eq!(res[0].0, 2);
     let draft = &res[0].1;
     assert_eq!(draft.draft_group_id, 0);
-    assert_eq!(draft.lockup_id, None);
-    assert_eq!(draft.lockup.total_balance, amount);
-
-    assert_eq!(res[1].0, 0);
-    let draft = &res[1].1;
-    assert_eq!(draft.draft_group_id, 0);
-    assert_eq!(draft.lockup_id, Some(0));
     assert_eq!(draft.lockup.total_balance, amount);
 }
 
@@ -335,7 +327,6 @@ fn test_create_via_draft_batches_and_claim() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_id: None,
         lockup,
     };
 
