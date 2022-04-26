@@ -249,7 +249,7 @@ impl Contract {
     }
 
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
-        let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
+        let draft = self.drafts.remove(&draft_id).expect("draft not found");
         let draft_group = self
             .draft_groups
             .get(draft.draft_group_id as _)
