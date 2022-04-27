@@ -12,6 +12,10 @@ pub struct Draft {
 }
 
 impl Draft {
+    pub fn total_balance(&self) -> Balance {
+        self.lockup.schedule.total_balance()
+    }
+
     pub fn assert_new_valid(&self) {
         let amount = self.lockup.schedule.total_balance();
         self.lockup.assert_new_valid(amount);

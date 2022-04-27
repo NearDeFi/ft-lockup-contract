@@ -233,7 +233,7 @@ impl Contract {
         self.next_draft_id += 1;
         assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
 
-        draft_group.total_amount += draft.lockup.schedule.total_balance();
+        draft_group.total_amount += draft.total_balance();
         draft_group.draft_indices.insert(index);
         self.draft_groups
             .replace(draft.draft_group_id as _, &draft_group);
@@ -258,7 +258,7 @@ impl Contract {
 
         // remove draft from indices and total amount
         assert!(draft_group.draft_indices.remove(&draft_id), "Invariant");
-        let amount = draft.lockup.schedule.total_balance();
+        let amount = draft.total_balance();
         assert!(draft_group.total_amount >= amount, "Invariant");
         draft_group.total_amount -= amount;
         self.draft_groups
