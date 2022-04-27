@@ -230,6 +230,10 @@ fn test_convert_draft() {
     let res = e.get_draft(0);
     assert!(res.is_none(), "expected converted draft to be deleted");
 
+    let res = e.get_draft_group(0).unwrap();
+    assert!(res.draft_indices.is_empty(), "draft indices must be removed after convert");
+    assert_eq!(res.total_amount, 0, "draft amount must be subtracted from group");
+
     let lockup = e.get_lockup(0);
     assert_eq!(lockup.account_id, users.alice.valid_account_id());
     assert_eq!(lockup.total_balance, amount);
@@ -271,6 +275,7 @@ fn test_convert_drafts_batch() {
 
     // convert by anonymous
     let res = e.convert_drafts(&users.bob, &vec![0, 1]);
+    println!("{:#?}", res);
     assert!(res.is_ok());
     let res: Vec<LockupIndex> = res.unwrap_json();
     assert_eq!(res, vec![0, 1]);

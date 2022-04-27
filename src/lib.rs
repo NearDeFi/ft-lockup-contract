@@ -250,11 +250,19 @@ impl Contract {
 
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
         let draft = self.drafts.remove(&draft_id).expect("draft not found");
-        let draft_group = self
+        let mut draft_group = self
             .draft_groups
             .get(draft.draft_group_id as _)
             .expect("draft group not found");
         draft_group.assert_can_convert();
+
+        // remove draft from indices and total amount
+        assert!(draft_group.draft_indices.remove(&draft_id), "Invariant");
+        let amount = draft.lockup.schedule.total_balance();
+        assert!(draft_group.total_amount >= amount, "Invariant");
+        draft_group.total_amount -= amount;
+        self.draft_groups
+            .replace(draft.draft_group_id as _, &draft_group);
 
         let index = self.internal_add_lockup(&draft.lockup);
         log!(
