@@ -13,7 +13,7 @@ pub enum HashOrSchedule {
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct TerminationConfig {
     /// The account ID that can terminate vesting.
-    pub terminator_id: ValidAccountId,
+    pub payer_id: ValidAccountId,
     /// An optional vesting schedule
     pub vesting_schedule: Option<HashOrSchedule>,
 }
@@ -29,7 +29,7 @@ impl Lockup {
             .take()
             .expect("No termination config");
         assert_eq!(
-            termination_config.terminator_id.as_ref(),
+            termination_config.payer_id.as_ref(),
             initiator_id,
             "Unauthorized"
         );

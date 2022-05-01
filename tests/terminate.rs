@@ -24,7 +24,7 @@ fn test_lockup_terminate_no_vesting_schedule() {
         ]),
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: None,
         }),
     };
@@ -158,7 +158,7 @@ fn test_lockup_terminate_wrong_terminator() {
         ]),
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: None,
         }),
     };
@@ -202,7 +202,7 @@ fn test_lockup_terminate_with_no_token_storage_deposit() {
         ]),
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: None,
         }),
     };
@@ -291,7 +291,7 @@ fn test_lockup_terminate_custom_vesting_hash() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
         }),
     };
@@ -363,7 +363,7 @@ fn test_lockup_terminate_custom_vesting_invalid_hash() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
         }),
     };
@@ -424,7 +424,7 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Hash(incompatible_vesting_hash)),
         }),
     };
@@ -464,7 +464,7 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
         }),
     };
@@ -526,7 +526,7 @@ fn test_lockup_terminate_custom_vesting_before_release() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
         }),
     };
@@ -610,7 +610,7 @@ fn test_lockup_terminate_custom_vesting_during_release() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
         }),
     };
@@ -695,7 +695,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
         }),
     };
@@ -780,7 +780,7 @@ fn test_lockup_terminate_custom_vesting_after_vesting_finished() {
         schedule: lockup_schedule,
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
+            payer_id: users.eve.valid_account_id(),
             vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
         }),
     };
