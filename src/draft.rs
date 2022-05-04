@@ -25,7 +25,7 @@ impl Draft {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DraftGroup {
     pub total_amount: Balance,
-    pub funded: bool,
+    pub payer_id: Option<ValidAccountId>,
     pub draft_indices: HashSet<DraftIndex>,
 }
 
@@ -33,16 +33,16 @@ impl DraftGroup {
     pub fn new() -> Self {
         Self {
             total_amount: 0,
-            funded: false,
+            payer_id: None,
             draft_indices: HashSet::new(),
         }
     }
 
     pub fn assert_can_add_draft(&self) {
-        assert!(!self.funded, "cannot add draft, group already funded");
+        assert!(self.payer_id.is_none(), "cannot add draft, group already funded");
     }
 
     pub fn assert_can_convert(&self) {
-        assert!(self.funded, "cannot convert draft from not funded group");
+        assert!(self.payer_id.is_some(), "cannot convert draft from not funded group");
     }
 }

@@ -251,7 +251,7 @@ impl Contract {
     }
 
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
-        let draft = self.drafts.remove(&draft_id).expect("draft not found");
+        let mut draft = self.drafts.remove(&draft_id).expect("draft not found");
         let mut draft_group = self
             .draft_groups
             .get(draft.draft_group_id as _)
@@ -266,6 +266,11 @@ impl Contract {
         self.draft_groups
             .replace(draft.draft_group_id as _, &draft_group);
 
+        // update payer_id
+        if let Some(mut termination_config) = draft.lockup.termination_config {
+            termination_config.payer_id = draft_group.payer_id.unwrap();
+            draft.lockup.termination_config = Some(termination_config);
+        }
         let index = self.internal_add_lockup(&draft.lockup);
         log!(
             "Created new lockup for {} with index {} from draft {}",

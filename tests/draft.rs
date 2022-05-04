@@ -412,17 +412,16 @@ fn test_draft_payer_update() {
     let lockup = &lockups[0].1;
     assert_eq!(
         lockup.termination_config.as_ref().expect("expected termination_config").payer_id,
-        users.eve.valid_account_id(),
-        "expected terminator_id from draft creator",
+        users.dude.valid_account_id(),
+        "expected payer_id from draft group payer",
     );
 
     let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, 0);
-    // returned from dude's funding, TODO: fix
     let balance = e.ft_balance_of(&users.eve);
-    assert_eq!(balance, amount);
-    let balance = e.ft_balance_of(&users.dude);
     assert_eq!(balance, 0);
+    let balance = e.ft_balance_of(&users.dude);
+    assert_eq!(balance, amount);
 }
