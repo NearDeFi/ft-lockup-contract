@@ -16,9 +16,9 @@ impl Draft {
         self.lockup.schedule.total_balance()
     }
 
-    pub fn assert_new_valid(&self) {
+    pub fn assert_new_valid(&self, payer_id: &ValidAccountId) {
         let amount = self.lockup.schedule.total_balance();
-        self.lockup.assert_new_valid(amount);
+        self.lockup.assert_new_valid(amount, &payer_id);
     }
 }
 

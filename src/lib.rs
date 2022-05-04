@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use near_contract_standards::fungible_token::core_impl::ext_fungible_token;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::borsh::maybestd::collections::HashSet;
@@ -156,12 +158,12 @@ impl Contract {
         lockup_index: LockupIndex,
         hashed_schedule: Option<Schedule>,
     ) -> PromiseOrValue<WrappedBalance> {
-        let account_id = env::predecessor_account_id();
+        self.assert_deposit_whitelist(&env::predecessor_account_id());
         let mut lockup = self
             .lockups
             .get(lockup_index as _)
             .expect("Lockup not found");
-        let unvested_balance = lockup.terminate(&account_id, hashed_schedule);
+        let (unvested_balance, payer_id) = lockup.terminate(hashed_schedule);
         self.lockups.replace(lockup_index as _, &lockup);
 
         // no need to store empty lockup
@@ -177,7 +179,7 @@ impl Contract {
 
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
-                account_id.clone(),
+                payer_id.clone().into(),
                 unvested_balance.into(),
                 Some(format!("Terminated lockup #{}", lockup_index)),
                 &self.token_account_id,
@@ -185,7 +187,7 @@ impl Contract {
                 GAS_FOR_FT_TRANSFER,
             )
             .then(ext_self::after_lockup_termination(
-                account_id,
+                payer_id.clone().into(),
                 unvested_balance.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,
@@ -222,7 +224,7 @@ impl Contract {
 
     pub fn create_draft(&mut self, draft: Draft) -> DraftIndex {
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        draft.assert_new_valid();
+        draft.assert_new_valid(&env::predecessor_account_id().try_into().unwrap());
         let mut draft_group = self
             .draft_groups
             .get(draft.draft_group_id as _)

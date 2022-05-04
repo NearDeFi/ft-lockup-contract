@@ -351,3 +351,78 @@ fn test_create_via_draft_batches_and_claim() {
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, amount);
 }
+
+#[test]
+fn test_draft_payer_update() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+    let amount = d(60000, TOKEN_DECIMALS);
+
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
+    assert!(res.is_ok());
+    ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
+
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.dude.valid_account_id());
+    assert!(res.is_ok());
+    ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
+    e.ft_transfer(&e.owner, amount, &users.dude);
+
+    let schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount,
+        },
+    ]);
+
+    let lockup = Lockup {
+        account_id: users.alice.valid_account_id(),
+        schedule: schedule.clone(),
+        claimed_balance: 0,
+        termination_config: Some(TerminationConfig {
+            payer_id: users.eve.valid_account_id(),
+            vesting_schedule: None,
+        }),
+    };
+
+    let res = e.create_draft_group(&e.owner);
+    assert!(res.is_ok());
+    let draft_group_id = 0;
+
+    let draft = Draft {
+        draft_group_id,
+        lockup,
+    };
+    e.create_draft(&users.eve, &draft);
+
+    // fund draft group
+    let res = e.fund_draft_group(&users.dude, amount, 0);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(res.is_ok());
+    let lockup_index: LockupIndex = res.unwrap_json();
+
+    let lockups = e.get_account_lockups(&users.alice);
+    assert_eq!(lockups.len(), 1);
+    let lockup = &lockups[0].1;
+    assert_eq!(
+        lockup.termination_config.as_ref().expect("expected termination_config").payer_id,
+        users.eve.valid_account_id(),
+        "expected terminator_id from draft creator",
+    );
+
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
+    assert_eq!(res.0, amount);
+    let balance = e.ft_balance_of(&users.alice);
+    assert_eq!(balance, 0);
+    // returned from dude's funding, TODO: fix
+    let balance = e.ft_balance_of(&users.eve);
+    assert_eq!(balance, amount);
+    let balance = e.ft_balance_of(&users.dude);
+    assert_eq!(balance, 0);
+}
