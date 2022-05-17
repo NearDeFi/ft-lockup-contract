@@ -63,15 +63,15 @@ impl Contract {
 
     pub(crate) fn internal_claim_lockups(
         &mut self,
-        amounts: HashMap<LockupIndex, WrappedBalance>,
+        claim_amounts: HashMap<LockupIndex, WrappedBalance>,
         mut lockups_by_id: HashMap<LockupIndex, Lockup>,
     ) -> PromiseOrValue<WrappedBalance> {
         let account_id = env::predecessor_account_id();
         let mut lockup_claims = vec![];
         let mut total_claim_amount = 0;
-        for (lockup_index, lockup_amount) in amounts {
+        for (lockup_index, lockup_claim_amount) in claim_amounts {
             let lockup = lockups_by_id.get_mut(&lockup_index).unwrap();
-            let lockup_claim = lockup.claim(lockup_index, lockup_amount.0);
+            let lockup_claim = lockup.claim(lockup_index, lockup_claim_amount.0);
 
             if lockup_claim.claim_amount.0 > 0 {
                 log!(
