@@ -245,7 +245,7 @@ impl Env {
     }
 
     pub fn claim(&self, user: &UserAccount) -> ExecutionResult {
-        user.function_call(self.contract.contract.claim(), CLAIM_GAS, 0)
+        user.function_call(self.contract.contract.claim(None), CLAIM_GAS, 0)
     }
 
     pub fn claim_lockups(
@@ -254,7 +254,7 @@ impl Env {
         amounts: &Vec<(LockupIndex, WrappedBalance)>,
     ) -> ExecutionResult {
         user.function_call(
-            self.contract.contract.claim_lockups(amounts.clone()),
+            self.contract.contract.claim(Some(amounts.clone())),
             CLAIM_GAS,
             0,
         )

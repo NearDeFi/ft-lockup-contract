@@ -91,34 +91,35 @@ impl Contract {
         }
     }
 
-    pub fn claim_lockups(
+    pub fn claim(
         &mut self,
-        amounts: Vec<(LockupIndex, WrappedBalance)>,
+        amounts: Option<Vec<(LockupIndex, WrappedBalance)>>,
     ) -> PromiseOrValue<WrappedBalance> {
-        let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
         let account_id = env::predecessor_account_id();
-        let lockups_by_id: HashMap<LockupIndex, Lockup> = self
-            .internal_get_account_lockups_by_id(&account_id, &amounts.keys().cloned().collect())
-            .into_iter()
-            .collect();
-        self.internal_claim_lockups(amounts, lockups_by_id)
-    }
 
-    pub fn claim(&mut self) -> PromiseOrValue<WrappedBalance> {
-        let account_id = env::predecessor_account_id();
-        let lockups_by_id: HashMap<LockupIndex, Lockup> = self
-            .internal_get_account_lockups(&account_id)
-            .into_iter()
-            .collect();
-        let amounts: HashMap<LockupIndex, WrappedBalance> = lockups_by_id
-            .iter()
-            .map(|(lockup_id, lockup)| {
-                let unlocked_balance = lockup.schedule.unlocked_balance(current_timestamp_sec());
-                let amount: WrappedBalance = (unlocked_balance - lockup.claimed_balance).into();
+        let (amounts, lockups_by_id) = if let Some(amounts) = amounts {
+            let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
+            let lockups_by_id: HashMap<LockupIndex, Lockup> = self
+                .internal_get_account_lockups_by_id(&account_id, &amounts.keys().cloned().collect())
+                .into_iter()
+                .collect();
+            (amounts, lockups_by_id)
+        } else {
+            let lockups_by_id: HashMap<LockupIndex, Lockup> = self
+                .internal_get_account_lockups(&account_id)
+                .into_iter()
+                .collect();
+            let amounts: HashMap<LockupIndex, WrappedBalance> = lockups_by_id
+                .iter()
+                .map(|(lockup_id, lockup)| {
+                    let unlocked_balance = lockup.schedule.unlocked_balance(current_timestamp_sec());
+                    let amount: WrappedBalance = (unlocked_balance - lockup.claimed_balance).into();
 
-                (lockup_id.clone(), amount)
-            })
+                    (lockup_id.clone(), amount)
+                })
             .collect();
+            (amounts, lockups_by_id)
+        };
 
         self.internal_claim_lockups(amounts, lockups_by_id)
     }
