@@ -68,31 +68,31 @@ impl Contract {
     ) -> PromiseOrValue<WrappedBalance> {
         let account_id = env::predecessor_account_id();
         let mut lockup_claims = vec![];
-        let mut total_balance_to_claim = 0;
+        let mut total_claim_amount = 0;
         for (lockup_index, lockup_amount) in amounts {
             let lockup = lockups_by_id.get_mut(&lockup_index).unwrap();
             let lockup_claim = lockup.claim_balance(lockup_index, lockup_amount.0);
 
-            if lockup_claim.balance_to_claim.0 > 0 {
+            if lockup_claim.claim_amount.0 > 0 {
                 log!(
                     "Claiming {} form lockup #{}",
-                    lockup_claim.balance_to_claim.0,
+                    lockup_claim.claim_amount.0,
                     lockup_index
                 );
-                total_balance_to_claim += lockup_claim.balance_to_claim.0;
+                total_claim_amount += lockup_claim.claim_amount.0;
                 self.lockups.replace(lockup_index as _, &lockup);
                 lockup_claims.push(lockup_claim);
             }
         }
-        log!("Total claim {}", total_balance_to_claim);
+        log!("Total claim {}", total_claim_amount);
 
-        if total_balance_to_claim > 0 {
+        if total_claim_amount > 0 {
             ext_fungible_token::ft_transfer(
                 account_id.clone(),
-                total_balance_to_claim.into(),
+                total_claim_amount.into(),
                 Some(format!(
                     "Claiming unlocked {} balance from {}",
-                    total_balance_to_claim,
+                    total_claim_amount,
                     env::current_account_id()
                 )),
                 &self.token_account_id,

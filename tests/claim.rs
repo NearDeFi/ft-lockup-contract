@@ -444,7 +444,7 @@ fn test_claim_lockups_with_specific_amounts_fail() {
         &vec![(1, (amount * 2 / 3).into()), (0, (amount / 4).into())],
     );
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("too big balance_to_claim for lockup"));
+    assert!(format!("{:?}", res.status()).contains("too big claim_amount for lockup"));
 
     ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
 
@@ -454,5 +454,5 @@ fn test_claim_lockups_with_specific_amounts_fail() {
         &vec![(1, (amount * 2 / 3).into()), (0, (amount / 4).into())],
     );
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("too big balance_to_claim for lockup"));
+    assert!(format!("{:?}", res.status()).contains("too big claim_amount for lockup"));
 }
