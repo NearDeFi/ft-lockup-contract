@@ -36,8 +36,12 @@ impl Contract {
         &self,
         account_id: &AccountId,
     ) -> Vec<(LockupIndex, Lockup)> {
-        let lockup_ids = self.account_lockups.get(account_id).unwrap_or_default();
-        self.internal_get_account_lockups_by_id(&account_id, &lockup_ids)
+        self.account_lockups
+            .get(account_id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|lockup_index| (lockup_index, self.lockups.get(lockup_index as _).unwrap()))
+            .collect()
     }
 
     pub(crate) fn internal_get_account_lockups_by_id(
