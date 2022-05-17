@@ -71,7 +71,7 @@ impl Contract {
         let mut total_claim_amount = 0;
         for (lockup_index, lockup_amount) in amounts {
             let lockup = lockups_by_id.get_mut(&lockup_index).unwrap();
-            let lockup_claim = lockup.claim_balance(lockup_index, lockup_amount.0);
+            let lockup_claim = lockup.claim(lockup_index, lockup_amount.0);
 
             if lockup_claim.claim_amount.0 > 0 {
                 log!(
