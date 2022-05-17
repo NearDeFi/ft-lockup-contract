@@ -49,8 +49,7 @@ impl Contract {
 
         lockup_ids
             .iter()
-            .map(|&x| x)
-            .map(|lockup_index| {
+            .map(|&lockup_index| {
                 assert!(
                     account_lockup_ids.contains(&lockup_index),
                     "lockup not found for account: {}",

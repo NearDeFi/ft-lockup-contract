@@ -98,7 +98,7 @@ impl Contract {
         let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
         let account_id = env::predecessor_account_id();
         let lockups_by_id: HashMap<LockupIndex, Lockup> = self
-            .internal_get_account_lockups_by_id(&account_id, &amounts.keys().map(|&x| x).collect())
+            .internal_get_account_lockups_by_id(&account_id, &amounts.keys().cloned().collect())
             .into_iter()
             .collect();
         self.internal_claim_lockups(amounts, lockups_by_id)
