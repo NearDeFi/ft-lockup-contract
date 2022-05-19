@@ -49,6 +49,49 @@ impl From<Lockup> for LockupView {
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Deserialize))]
+pub struct LockupCreateView {
+    pub account_id: ValidAccountId,
+    pub schedule: Schedule,
+
+    #[serde(default)]
+    #[serde(with = "u128_dec_format")]
+    pub claimed_balance: Balance,
+    /// An optional configuration that allows vesting/lockup termination.
+    pub vesting_schedule: Option<HashOrSchedule>,
+
+    #[serde(with = "u128_dec_format")]
+    pub total_balance: Balance,
+    #[serde(with = "u128_dec_format")]
+    pub unclaimed_balance: Balance,
+    /// The current timestamp
+    pub timestamp: TimestampSec,
+}
+
+impl From<LockupCreate> for LockupCreateView {
+    fn from(lockup_create: LockupCreate) -> Self {
+        let total_balance = lockup_create.schedule.total_balance();
+        let timestamp = current_timestamp_sec();
+        let unclaimed_balance = lockup_create.schedule.unlocked_balance(timestamp);
+        let LockupCreate {
+            account_id,
+            schedule,
+            vesting_schedule,
+        } = lockup_create;
+        Self {
+            account_id,
+            schedule,
+            claimed_balance: 0,
+            vesting_schedule,
+            total_balance,
+            unclaimed_balance,
+            timestamp,
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Deserialize))]
 pub struct DraftGroupView {
     #[serde(default)]
     #[serde(with = "u128_dec_format")]
