@@ -57,11 +57,10 @@ fn test_create_draft() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
     let amount = d(60000, TOKEN_DECIMALS);
-    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup,
+        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
     };
 
     let res = e.create_draft(&e.owner, &draft);
@@ -104,11 +103,10 @@ fn test_create_drafts_batch() {
     let drafts: Vec<Draft> = vec![&users.alice, &users.bob]
         .iter()
         .map(|user| {
-            let lockup = Lockup::new_unlocked(user.account_id.clone(), amount);
             let draft_group_id = 0;
             Draft {
                 draft_group_id,
-                lockup,
+                lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
             }
         })
         .collect();
@@ -140,11 +138,10 @@ fn test_fund_draft_group() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
     let amount = d(60000, TOKEN_DECIMALS);
-    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup,
+        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
     };
 
     e.create_draft_group(&e.owner);
@@ -198,11 +195,10 @@ fn test_convert_draft() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
     let amount = d(60000, TOKEN_DECIMALS);
-    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup,
+        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
     };
 
     e.create_draft_group(&e.owner);
@@ -260,11 +256,10 @@ fn test_convert_drafts_batch() {
     let drafts: Vec<Draft> = vec![&users.alice, &users.bob]
         .iter()
         .map(|user| {
-            let lockup = Lockup::new_unlocked(user.account_id.clone(), amount);
             let draft_group_id = 0;
             Draft {
                 draft_group_id,
-                lockup,
+                lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
             }
         })
         .collect();
@@ -300,11 +295,10 @@ fn test_view_drafts() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
     let amount = d(60000, TOKEN_DECIMALS);
-    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup,
+        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
     };
 
     e.create_draft_group(&e.owner);
@@ -334,11 +328,10 @@ fn test_create_via_draft_batches_and_claim() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
     let amount = d(60000, TOKEN_DECIMALS);
-    let lockup = Lockup::new_unlocked(users.alice.account_id.clone(), amount);
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup,
+        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
     };
 
     e.create_draft_group(&e.owner);
@@ -385,14 +378,10 @@ fn test_draft_payer_update() {
         },
     ]);
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: schedule.clone(),
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
     };
 
     let res = e.create_draft_group(&e.owner);
@@ -401,7 +390,7 @@ fn test_draft_payer_update() {
 
     let draft = Draft {
         draft_group_id,
-        lockup,
+        lockup_create,
     };
     e.create_draft(&users.eve, &draft);
 

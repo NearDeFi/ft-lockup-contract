@@ -11,7 +11,7 @@ use near_sdk_sim::{
 
 pub use ft_lockup::draft::{Draft, DraftGroupIndex, DraftIndex};
 use ft_lockup::ft_token_receiver::DraftGroupFunding;
-pub use ft_lockup::lockup::{Lockup, LockupIndex};
+pub use ft_lockup::lockup::{Lockup, LockupCreate, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
 pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
 use ft_lockup::view::{DraftGroupView, DraftView, LockupView};

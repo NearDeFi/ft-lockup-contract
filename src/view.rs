@@ -79,7 +79,11 @@ impl From<Draft> for DraftView {
     fn from(draft: Draft) -> Self {
         Self {
             draft_group_id: draft.draft_group_id,
-            lockup: draft.lockup.into(),
+            // TODO: rework
+            lockup: draft
+                .lockup_create
+                .into_lockup(&"noone.near".try_into().unwrap())
+                .into(),
         }
     }
 }

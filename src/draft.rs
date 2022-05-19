@@ -3,22 +3,24 @@ use crate::*;
 pub type DraftGroupIndex = u32;
 pub type DraftIndex = u32;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Clone))]
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
 #[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct Draft {
     pub draft_group_id: DraftGroupIndex,
-    pub lockup: Lockup,
+    pub lockup_create: LockupCreate,
 }
 
 impl Draft {
     pub fn total_balance(&self) -> Balance {
-        self.lockup.schedule.total_balance()
+        self.lockup_create.schedule.total_balance()
     }
 
     pub fn assert_new_valid(&self, payer_id: &ValidAccountId) {
-        let amount = self.lockup.schedule.total_balance();
-        self.lockup.assert_new_valid(amount, &payer_id);
+        let amount = self.lockup_create.schedule.total_balance();
+        self.lockup_create
+            .into_lockup(payer_id)
+            .assert_new_valid(amount, &payer_id);
     }
 }
 

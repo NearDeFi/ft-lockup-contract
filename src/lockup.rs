@@ -70,3 +70,38 @@ impl Lockup {
         }
     }
 }
+
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
+pub struct LockupCreate {
+    pub account_id: ValidAccountId,
+    pub schedule: Schedule,
+    pub vesting_schedule: Option<HashOrSchedule>,
+}
+
+impl LockupCreate {
+    pub fn new_unlocked(account_id: AccountId, total_balance: Balance) -> Self {
+        Self {
+            account_id: account_id.try_into().unwrap(),
+            schedule: Schedule::new_unlocked(total_balance),
+            vesting_schedule: None,
+        }
+    }
+
+    pub fn into_lockup(&self, payer_id: &ValidAccountId) -> Lockup {
+        let vesting_schedule = self.vesting_schedule.clone();
+        Lockup {
+            account_id: self.account_id.clone(),
+            schedule: self.schedule.clone(),
+            claimed_balance: 0,
+            termination_config: match vesting_schedule {
+                None => None,
+                Some(vesting_schedule) => Some(TerminationConfig {
+                    payer_id: payer_id.clone(),
+                    vesting_schedule,
+                }),
+            },
+        }
+    }
+}
