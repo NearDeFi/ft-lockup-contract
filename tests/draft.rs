@@ -391,7 +391,7 @@ fn test_draft_payer_update() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: None,
+            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
         }),
     };
 

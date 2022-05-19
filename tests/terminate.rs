@@ -34,7 +34,7 @@ fn test_terminate_basic_payer_logic() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: None,
+            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
         }),
     };
 
@@ -50,7 +50,7 @@ fn test_terminate_basic_payer_logic() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: None,
+            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
         }),
     };
 
@@ -109,7 +109,7 @@ fn test_terminate_basic_payer_logic() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: e.owner.valid_account_id(),
-            vesting_schedule: None,
+            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
         }),
     };
     // creating lockup for user without storage deposit
@@ -129,99 +129,6 @@ fn test_terminate_basic_payer_logic() {
     assert_eq!(lockups[0].1.unclaimed_balance, amount);
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, 0);
-}
-
-#[test]
-fn test_lockup_terminate_no_vesting_schedule() {
-    let e = Env::init(None);
-    let users = Users::init(&e);
-    let amount = d(60000, TOKEN_DECIMALS);
-    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
-    let lockups = e.get_account_lockups(&users.alice);
-    assert!(lockups.is_empty());
-    let lockup = Lockup {
-        account_id: users.alice.valid_account_id(),
-        schedule: Schedule(vec![
-            Checkpoint {
-                timestamp: GENESIS_TIMESTAMP_SEC,
-                balance: 0,
-            },
-            Checkpoint {
-                timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
-                balance: amount,
-            },
-        ]),
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: e.owner.valid_account_id(),
-            vesting_schedule: None,
-        }),
-    };
-
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
-    assert_eq!(balance.0, amount);
-    let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups.len(), 1);
-    assert_eq!(lockups[0].1.total_balance, amount);
-    assert_eq!(lockups[0].1.claimed_balance, 0);
-    assert_eq!(lockups[0].1.unclaimed_balance, 0);
-
-    // 1/3 unlock
-    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 3);
-    let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups[0].1.total_balance, amount);
-    assert_eq!(lockups[0].1.claimed_balance, 0);
-    assert_eq!(lockups[0].1.unclaimed_balance, amount / 3);
-
-    // Claim tokens
-    ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
-    let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
-    assert_eq!(res.0, amount / 3);
-    let balance = e.ft_balance_of(&users.alice);
-    assert_eq!(balance, amount / 3);
-
-    // Check lockup after claim
-    let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups[0].1.total_balance, amount);
-    assert_eq!(lockups[0].1.claimed_balance, amount / 3);
-    assert_eq!(lockups[0].1.unclaimed_balance, 0);
-
-    // 1/2 unlock
-    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 2);
-    let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups[0].1.total_balance, amount);
-    assert_eq!(lockups[0].1.claimed_balance, amount / 3);
-    assert_eq!(lockups[0].1.unclaimed_balance, amount / 6);
-
-    let lockup_index = lockups[0].0;
-
-    // TERMINATE
-    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
-    assert_eq!(res.0, amount / 2);
-
-    let terminator_balance = e.ft_balance_of(&e.owner);
-    assert_eq!(TOKEN_TOTAL_SUPPLY - terminator_balance, amount / 2);
-
-    // full unlock 2 / 3 period after termination before initial timestamp
-    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2 / 3);
-    let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups[0].1.claimed_balance, amount / 3);
-    assert_eq!(lockups[0].1.unclaimed_balance, amount / 6);
-
-    // Final claim
-    let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
-    assert_eq!(res.0, amount / 6);
-    let balance = e.ft_balance_of(&users.alice);
-    assert_eq!(balance, amount / 2);
-
-    // User's lockups should be empty, since fully claimed.
-    let lockups = e.get_account_lockups(&users.alice);
-    assert!(lockups.is_empty());
-
-    // Manually checking the lockup by index
-    let lockup = e.get_lockup(0);
-    assert_eq!(lockup.claimed_balance, amount / 2);
-    assert_eq!(lockup.unclaimed_balance, 0);
 }
 
 #[test]
@@ -246,7 +153,7 @@ fn test_lockup_terminate_custom_vesting_hash() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
+            vesting_schedule: HashOrSchedule::Hash(vesting_hash),
         }),
     };
 
@@ -322,7 +229,7 @@ fn test_lockup_terminate_custom_vesting_invalid_hash() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
+            vesting_schedule: HashOrSchedule::Hash(vesting_hash),
         }),
     };
 
@@ -387,7 +294,7 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Hash(incompatible_vesting_hash)),
+            vesting_schedule: HashOrSchedule::Hash(incompatible_vesting_hash),
         }),
     };
 
@@ -431,7 +338,7 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
         }),
     };
 
@@ -496,7 +403,7 @@ fn test_lockup_terminate_custom_vesting_before_release() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
         }),
     };
 
@@ -584,7 +491,7 @@ fn test_lockup_terminate_custom_vesting_during_release() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
         }),
     };
 
@@ -674,7 +581,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
         }),
     };
 
@@ -763,7 +670,7 @@ fn test_lockup_terminate_custom_vesting_after_vesting_finished() {
         claimed_balance: 0,
         termination_config: Some(TerminationConfig {
             payer_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
         }),
     };
 

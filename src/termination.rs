@@ -15,7 +15,7 @@ pub struct TerminationConfig {
     /// The account ID that can terminate vesting.
     pub payer_id: ValidAccountId,
     /// An optional vesting schedule
-    pub vesting_schedule: Option<HashOrSchedule>,
+    pub vesting_schedule: HashOrSchedule,
 }
 
 impl Lockup {
@@ -28,8 +28,7 @@ impl Lockup {
         let total_balance = self.schedule.total_balance();
         let current_timestamp = current_timestamp_sec();
         let vested_balance = match &termination_config.vesting_schedule {
-            None => &self.schedule,
-            Some(HashOrSchedule::Hash(hash)) => {
+            HashOrSchedule::Hash(hash) => {
                 let schedule = hashed_schedule
                     .as_ref()
                     .expect("Revealed schedule required for the termination");
@@ -43,7 +42,7 @@ impl Lockup {
                 self.schedule.assert_valid_termination_schedule(schedule);
                 schedule
             }
-            Some(HashOrSchedule::Schedule(schedule)) => &schedule,
+            HashOrSchedule::Schedule(schedule) => &schedule,
         }
         .unlocked_balance(current_timestamp);
         let unvested_balance = total_balance - vested_balance;

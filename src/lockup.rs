@@ -59,13 +59,10 @@ impl Lockup {
             assert_eq!(&termination_config.payer_id, payer_id, "payer_id mismatch");
 
             match &termination_config.vesting_schedule {
-                None => {
-                    // Ok, using lockup schedule.
-                }
-                Some(HashOrSchedule::Hash(_hash)) => {
+                HashOrSchedule::Hash(_hash) => {
                     // Ok, using unknown hash. Can't verify.
                 }
-                Some(HashOrSchedule::Schedule(schedule)) => {
+                HashOrSchedule::Schedule(schedule) => {
                     schedule.assert_valid(total_balance);
                     self.schedule.assert_valid_termination_schedule(&schedule);
                 }
