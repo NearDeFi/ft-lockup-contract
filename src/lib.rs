@@ -97,7 +97,7 @@ impl Contract {
     ) -> PromiseOrValue<WrappedBalance> {
         let account_id = env::predecessor_account_id();
 
-        let (amounts, lockups_by_id) = if let Some(amounts) = amounts {
+        let (claim_amounts, mut lockups_by_id) = if let Some(amounts) = amounts {
             let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
             let lockups_by_id: HashMap<LockupIndex, Lockup> = self
                 .internal_get_account_lockups_by_id(&account_id, &amounts.keys().cloned().collect())
@@ -121,7 +121,50 @@ impl Contract {
             (amounts, lockups_by_id)
         };
 
-        self.internal_claim_lockups(amounts, lockups_by_id)
+        let account_id = env::predecessor_account_id();
+        let mut lockup_claims = vec![];
+        let mut total_claim_amount = 0;
+        for (lockup_index, lockup_claim_amount) in claim_amounts {
+            let lockup = lockups_by_id.get_mut(&lockup_index).unwrap();
+            let lockup_claim = lockup.claim(lockup_index, lockup_claim_amount.0);
+
+            if lockup_claim.claim_amount.0 > 0 {
+                log!(
+                    "Claiming {} form lockup #{}",
+                    lockup_claim.claim_amount.0,
+                    lockup_index
+                );
+                total_claim_amount += lockup_claim.claim_amount.0;
+                self.lockups.replace(lockup_index as _, &lockup);
+                lockup_claims.push(lockup_claim);
+            }
+        }
+        log!("Total claim {}", total_claim_amount);
+
+        if total_claim_amount > 0 {
+            ext_fungible_token::ft_transfer(
+                account_id.clone(),
+                total_claim_amount.into(),
+                Some(format!(
+                    "Claiming unlocked {} balance from {}",
+                    total_claim_amount,
+                    env::current_account_id()
+                )),
+                &self.token_account_id,
+                ONE_YOCTO,
+                GAS_FOR_FT_TRANSFER,
+            )
+            .then(ext_self::after_ft_transfer(
+                account_id,
+                lockup_claims,
+                &env::current_account_id(),
+                NO_DEPOSIT,
+                GAS_FOR_AFTER_FT_TRANSFER,
+            ))
+            .into()
+        } else {
+            PromiseOrValue::Value(0.into())
+        }
     }
 
     pub fn terminate(
