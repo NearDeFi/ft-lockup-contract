@@ -19,10 +19,7 @@ pub struct TerminationConfig {
 }
 
 impl Lockup {
-    pub fn terminate(
-        &mut self,
-        hashed_schedule: Option<Schedule>,
-    ) -> (Balance, ValidAccountId) {
+    pub fn terminate(&mut self, hashed_schedule: Option<Schedule>) -> (Balance, ValidAccountId) {
         let termination_config = self
             .termination_config
             .take()

@@ -231,8 +231,14 @@ fn test_convert_draft() {
     assert!(res.is_none(), "expected converted draft to be deleted");
 
     let res = e.get_draft_group(0).unwrap();
-    assert!(res.draft_indices.is_empty(), "draft indices must be removed after convert");
-    assert_eq!(res.total_amount, 0, "draft amount must be subtracted from group");
+    assert!(
+        res.draft_indices.is_empty(),
+        "draft indices must be removed after convert"
+    );
+    assert_eq!(
+        res.total_amount, 0,
+        "draft amount must be subtracted from group"
+    );
 
     let lockup = e.get_lockup(0);
     assert_eq!(lockup.account_id, users.alice.valid_account_id());
@@ -411,7 +417,11 @@ fn test_draft_payer_update() {
     assert_eq!(lockups.len(), 1);
     let lockup = &lockups[0].1;
     assert_eq!(
-        lockup.termination_config.as_ref().expect("expected termination_config").payer_id,
+        lockup
+            .termination_config
+            .as_ref()
+            .expect("expected termination_config")
+            .payer_id,
         users.dude.valid_account_id(),
         "expected payer_id from draft group payer",
     );

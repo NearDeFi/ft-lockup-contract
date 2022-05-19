@@ -39,10 +39,16 @@ impl DraftGroup {
     }
 
     pub fn assert_can_add_draft(&self) {
-        assert!(self.payer_id.is_none(), "cannot add draft, group already funded");
+        assert!(
+            self.payer_id.is_none(),
+            "cannot add draft, group already funded"
+        );
     }
 
     pub fn assert_can_convert(&self) {
-        assert!(self.payer_id.is_some(), "cannot convert draft from not funded group");
+        assert!(
+            self.payer_id.is_some(),
+            "cannot convert draft from not funded group"
+        );
     }
 }
