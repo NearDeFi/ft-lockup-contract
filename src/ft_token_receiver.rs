@@ -10,7 +10,7 @@ pub struct DraftGroupFunding {
 #[serde(crate = "near_sdk::serde")]
 #[serde(untagged)]
 pub enum FtMessage {
-    Lockup(Lockup),
+    LockupCreate(LockupCreate),
     DraftGroupFunding(DraftGroupFunding),
 }
 
@@ -32,8 +32,8 @@ impl FungibleTokenReceiver for Contract {
 
         let ft_message: FtMessage = serde_json::from_str(&msg).unwrap();
         match ft_message {
-            FtMessage::Lockup(lockup) => {
-                // TODO: rework
+            FtMessage::LockupCreate(lockup_create) => {
+                let lockup = lockup_create.into_lockup(&sender_id);
                 lockup.assert_new_valid(amount, &sender_id);
                 let index = self.internal_add_lockup(&lockup);
                 log!(

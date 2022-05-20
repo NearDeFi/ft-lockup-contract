@@ -261,9 +261,9 @@ impl Env {
         &self,
         user: &UserAccount,
         amount: Balance,
-        lockup: &Lockup,
+        lockup_create: &LockupCreate,
     ) -> ExecutionResult {
-        self.ft_transfer_call(user, amount, &serde_json::to_string(lockup).unwrap())
+        self.ft_transfer_call(user, amount, &serde_json::to_string(lockup_create).unwrap())
     }
 
     pub fn fund_draft_group(

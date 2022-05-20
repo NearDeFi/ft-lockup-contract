@@ -28,34 +28,14 @@ fn test_terminate_basic_payer_logic() {
         },
     ]);
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: schedule.clone(),
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
-        }),
-    };
-
-    // create lockup fails if payer != current user
-    let res = e.add_lockup(&e.owner, amount, &lockup);
-    let balance: WrappedBalance = res.unwrap_json();
-    assert_eq!(balance.0, 0);
-    assert!(res.logs()[0].contains("Refund"));
-
-    let lockup = Lockup {
-        account_id: users.alice.valid_account_id(),
-        schedule: schedule.clone(),
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
     };
 
     // create lockup succeeds if terminator = payer
-    let res = e.add_lockup(&users.eve, amount, &lockup);
+    let res = e.add_lockup(&users.eve, amount, &lockup_create);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount);
 
@@ -82,15 +62,14 @@ fn test_terminate_basic_payer_logic() {
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, 0);
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: schedule.clone(),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
 
     // lockup without terminator creates successfuly
-    let res = e.add_lockup(&e.owner, amount, &lockup);
+    let res = e.add_lockup(&e.owner, amount, &lockup_create);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount);
 
@@ -103,17 +82,13 @@ fn test_terminate_basic_payer_logic() {
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("No termination config"));
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.bob.valid_account_id(),
         schedule: schedule.clone(),
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: e.owner.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(schedule.clone()),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
     };
     // creating lockup for user without storage deposit
-    let res = e.add_lockup(&e.owner, amount, &lockup);
+    let res = e.add_lockup(&e.owner, amount, &lockup_create);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.bob);
@@ -147,17 +122,15 @@ fn test_lockup_terminate_custom_vesting_hash() {
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
     let vesting_hash = e.hash_schedule(&vesting_schedule);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Hash(vesting_hash),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -223,17 +196,15 @@ fn test_lockup_terminate_custom_vesting_invalid_hash() {
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
     let vesting_hash = e.hash_schedule(&vesting_schedule);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Hash(vesting_hash),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -288,17 +259,15 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
         },
     ]);
     let incompatible_vesting_hash = e.hash_schedule(&incompatible_vesting_schedule);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Hash(incompatible_vesting_hash),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Hash(incompatible_vesting_hash)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -332,17 +301,15 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     e.ft_transfer(&e.owner, amount, &users.eve);
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -397,17 +364,15 @@ fn test_lockup_terminate_custom_vesting_before_release() {
     e.ft_transfer(&e.owner, amount, &users.eve);
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -485,17 +450,15 @@ fn test_lockup_terminate_custom_vesting_during_release() {
     e.ft_transfer(&e.owner, amount, &users.eve);
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -575,17 +538,15 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
     e.ft_transfer(&e.owner, amount, &users.eve);
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -664,17 +625,15 @@ fn test_lockup_terminate_custom_vesting_after_vesting_finished() {
     e.ft_transfer(&e.owner, amount, &users.eve);
 
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            payer_id: users.eve.valid_account_id(),
-            vesting_schedule: HashOrSchedule::Schedule(vesting_schedule),
-        }),
+        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);

@@ -10,7 +10,7 @@ fn test_lockup_claim_logic() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -22,10 +22,9 @@ fn test_lockup_claim_logic() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -87,7 +86,7 @@ fn test_lockup_linear() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -99,10 +98,9 @@ fn test_lockup_linear() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -216,7 +214,7 @@ fn test_lockup_cliff_amazon() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -240,10 +238,9 @@ fn test_lockup_cliff_amazon() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);

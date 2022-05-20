@@ -65,7 +65,7 @@ fn test_get_lockups() {
             .add_lockup(
                 &e.owner,
                 amount,
-                &Lockup::new_unlocked(user.account_id().clone(), amount),
+                &LockupCreate::new_unlocked(user.account_id().clone(), amount),
             )
             .unwrap_json();
         assert_eq!(balance.0, amount);
