@@ -104,7 +104,7 @@ impl From<DraftGroup> for DraftGroupView {
     fn from(draft_group: DraftGroup) -> Self {
         Self {
             total_amount: draft_group.total_amount,
-            funded: draft_group.payer_id.is_some(),
+            funded: draft_group.beneficiary_id.is_some(),
             draft_indices: draft_group.draft_indices.into_iter().collect(),
         }
     }

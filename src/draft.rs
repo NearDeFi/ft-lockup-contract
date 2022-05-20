@@ -16,18 +16,18 @@ impl Draft {
         self.lockup_create.schedule.total_balance()
     }
 
-    pub fn assert_new_valid(&self, payer_id: &ValidAccountId) {
+    pub fn assert_new_valid(&self, beneficiary_id: &ValidAccountId) {
         let amount = self.lockup_create.schedule.total_balance();
         self.lockup_create
-            .into_lockup(payer_id)
-            .assert_new_valid(amount, &payer_id);
+            .into_lockup(beneficiary_id)
+            .assert_new_valid(amount, &beneficiary_id);
     }
 }
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct DraftGroup {
     pub total_amount: Balance,
-    pub payer_id: Option<ValidAccountId>,
+    pub beneficiary_id: Option<ValidAccountId>,
     pub draft_indices: HashSet<DraftIndex>,
 }
 
@@ -35,21 +35,21 @@ impl DraftGroup {
     pub fn new() -> Self {
         Self {
             total_amount: 0,
-            payer_id: None,
+            beneficiary_id: None,
             draft_indices: HashSet::new(),
         }
     }
 
     pub fn assert_can_add_draft(&self) {
         assert!(
-            self.payer_id.is_none(),
+            self.beneficiary_id.is_none(),
             "cannot add draft, group already funded"
         );
     }
 
     pub fn assert_can_convert(&self) {
         assert!(
-            self.payer_id.is_some(),
+            self.beneficiary_id.is_some(),
             "cannot convert draft from not funded group"
         );
     }

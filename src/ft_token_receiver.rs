@@ -52,8 +52,11 @@ impl FungibleTokenReceiver for Contract {
                     draft_group.total_amount, amount,
                     "The draft group total balance doesn't match the transferred balance",
                 );
-                assert!(draft_group.payer_id.is_none(), "draft group already funded");
-                draft_group.payer_id = Some(sender_id);
+                assert!(
+                    draft_group.beneficiary_id.is_none(),
+                    "draft group already funded"
+                );
+                draft_group.beneficiary_id = Some(sender_id);
                 self.draft_groups.replace(draft_group_id as _, &draft_group);
                 log!("Funded draft group {}", draft_group_id);
             }

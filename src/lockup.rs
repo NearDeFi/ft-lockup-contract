@@ -48,7 +48,7 @@ impl Lockup {
         }
     }
 
-    pub fn assert_new_valid(&self, total_balance: Balance, payer_id: &ValidAccountId) {
+    pub fn assert_new_valid(&self, total_balance: Balance, beneficiary_id: &ValidAccountId) {
         assert_eq!(
             self.claimed_balance, 0,
             "The initial lockup claimed balance should be 0"
@@ -56,7 +56,10 @@ impl Lockup {
         self.schedule.assert_valid(total_balance);
 
         if let Some(termination_config) = &self.termination_config {
-            assert_eq!(&termination_config.payer_id, payer_id, "payer_id mismatch");
+            assert_eq!(
+                &termination_config.beneficiary_id, beneficiary_id,
+                "beneficiary_id mismatch"
+            );
 
             match &termination_config.vesting_schedule {
                 HashOrSchedule::SameAsLockupSchedule => {
@@ -92,7 +95,7 @@ impl LockupCreate {
         }
     }
 
-    pub fn into_lockup(&self, payer_id: &ValidAccountId) -> Lockup {
+    pub fn into_lockup(&self, beneficiary_id: &ValidAccountId) -> Lockup {
         let vesting_schedule = self.vesting_schedule.clone();
         Lockup {
             account_id: self.account_id.clone(),
@@ -101,7 +104,7 @@ impl LockupCreate {
             termination_config: match vesting_schedule {
                 None => None,
                 Some(vesting_schedule) => Some(TerminationConfig {
-                    payer_id: payer_id.clone(),
+                    beneficiary_id: beneficiary_id.clone(),
                     vesting_schedule,
                 }),
             },

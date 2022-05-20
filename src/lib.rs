@@ -163,7 +163,7 @@ impl Contract {
             .lockups
             .get(lockup_index as _)
             .expect("Lockup not found");
-        let (unvested_balance, payer_id) = lockup.terminate(hashed_schedule);
+        let (unvested_balance, beneficiary_id) = lockup.terminate(hashed_schedule);
         self.lockups.replace(lockup_index as _, &lockup);
 
         // no need to store empty lockup
@@ -179,7 +179,7 @@ impl Contract {
 
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
-                payer_id.clone().into(),
+                beneficiary_id.clone().into(),
                 unvested_balance.into(),
                 Some(format!("Terminated lockup #{}", lockup_index)),
                 &self.token_account_id,
@@ -187,7 +187,7 @@ impl Contract {
                 GAS_FOR_FT_TRANSFER,
             )
             .then(ext_self::after_lockup_termination(
-                payer_id.clone().into(),
+                beneficiary_id.clone().into(),
                 unvested_balance.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,
@@ -268,7 +268,7 @@ impl Contract {
 
         let lockup = draft
             .lockup_create
-            .into_lockup(&draft_group.payer_id.unwrap());
+            .into_lockup(&draft_group.beneficiary_id.unwrap());
 
         let index = self.internal_add_lockup(&lockup);
         log!(
