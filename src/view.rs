@@ -115,18 +115,14 @@ impl From<DraftGroup> for DraftGroupView {
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Deserialize))]
 pub struct DraftView {
     pub draft_group_id: DraftGroupIndex,
-    pub lockup: LockupView,
+    pub lockup: LockupCreateView,
 }
 
 impl From<Draft> for DraftView {
     fn from(draft: Draft) -> Self {
         Self {
             draft_group_id: draft.draft_group_id,
-            // TODO: rework
-            lockup: draft
-                .lockup_create
-                .into_lockup(&"noone.near".try_into().unwrap())
-                .into(),
+            lockup: draft.lockup_create.into(),
         }
     }
 }

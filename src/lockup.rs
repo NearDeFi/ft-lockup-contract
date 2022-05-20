@@ -59,6 +59,9 @@ impl Lockup {
             assert_eq!(&termination_config.payer_id, payer_id, "payer_id mismatch");
 
             match &termination_config.vesting_schedule {
+                HashOrSchedule::SameAsLockupSchedule => {
+                    // Ok, using lockup schedule.
+                }
                 HashOrSchedule::Hash(_hash) => {
                     // Ok, using unknown hash. Can't verify.
                 }

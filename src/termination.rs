@@ -4,6 +4,7 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub enum HashOrSchedule {
+    SameAsLockupSchedule,
     Hash(Base58CryptoHash),
     Schedule(Schedule),
 }
@@ -28,6 +29,7 @@ impl Lockup {
         let total_balance = self.schedule.total_balance();
         let current_timestamp = current_timestamp_sec();
         let vested_balance = match &termination_config.vesting_schedule {
+            HashOrSchedule::SameAsLockupSchedule => &self.schedule,
             HashOrSchedule::Hash(hash) => {
                 let schedule = hashed_schedule
                     .as_ref()
