@@ -16,11 +16,12 @@ impl Draft {
         self.lockup_create.schedule.total_balance()
     }
 
-    pub fn assert_new_valid(&self, beneficiary_id: &ValidAccountId) {
+    pub fn assert_new_valid(&self) {
         let amount = self.lockup_create.schedule.total_balance();
+        // any valid near account id will work fine here as a parameter
         self.lockup_create
-            .into_lockup(beneficiary_id)
-            .assert_new_valid(amount, &beneficiary_id);
+            .into_lockup(&env::predecessor_account_id().try_into().unwrap())
+            .assert_new_valid(amount);
     }
 }
 

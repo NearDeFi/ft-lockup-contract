@@ -232,7 +232,7 @@ impl Contract {
 
     pub fn create_draft(&mut self, draft: Draft) -> DraftIndex {
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        draft.assert_new_valid(&env::predecessor_account_id().try_into().unwrap());
+        draft.assert_new_valid();
         let mut draft_group = self
             .draft_groups
             .get(&draft.draft_group_id as _)
