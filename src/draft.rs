@@ -53,4 +53,12 @@ impl DraftGroup {
             "cannot convert draft from not funded group"
         );
     }
+
+    pub fn fund(&mut self, beneficiary_id: &ValidAccountId) {
+        assert!(
+            self.beneficiary_id.is_none(),
+            "draft group already funded"
+        );
+        self.beneficiary_id = Some(beneficiary_id.clone());
+    }
 }
