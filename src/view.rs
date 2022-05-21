@@ -191,6 +191,10 @@ impl Contract {
         }
     }
 
+    pub fn get_next_draft_group_id(&self) -> DraftGroupIndex {
+        self.next_draft_group_id
+    }
+
     pub fn get_draft_group(&self, index: DraftGroupIndex) -> Option<DraftGroupView> {
         self.draft_groups.get(&index as _).map(|group| group.into())
     }

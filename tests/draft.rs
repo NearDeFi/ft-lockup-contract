@@ -201,7 +201,11 @@ fn test_convert_draft() {
         lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
     };
 
+    assert_eq!(e.get_next_draft_group_id(), 0);
     e.create_draft_group(&e.owner);
+    assert_eq!(e.get_next_draft_group_id(), 1);
+    e.create_draft_group(&e.owner);
+    assert_eq!(e.get_next_draft_group_id(), 2);
 
     // create draft 0
     let res = e.create_draft(&e.owner, &draft);
@@ -228,7 +232,6 @@ fn test_convert_draft() {
 
     let res = e.get_draft(0);
     assert!(res.is_none(), "expected converted draft to be deleted");
-
     let res = e.get_draft_group(0).unwrap();
     assert_eq!(
         res.draft_indices,
@@ -253,10 +256,15 @@ fn test_convert_draft() {
     let res = e.convert_draft(&users.bob, 1);
     assert!(res.is_ok());
 
+    assert_eq!(
+        e.get_next_draft_group_id(), 2,
+        "expected next_draft_group_id not changed after group remove",
+    );
+
     // draft group must be deleted
     assert!(
         e.get_draft_group(0).is_none(),
-        "draft indices must be removed after convert"
+        "draft group must be removed after convert",
     );
 }
 
