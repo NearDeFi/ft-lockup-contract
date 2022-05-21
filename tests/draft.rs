@@ -206,6 +206,9 @@ fn test_convert_draft() {
     // create draft 0
     let res = e.create_draft(&e.owner, &draft);
     assert!(res.is_ok());
+    // create draft 1
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(res.is_ok());
 
     // try convert before fund
     let res = e.convert_draft(&users.bob, 0);
@@ -213,9 +216,9 @@ fn test_convert_draft() {
     assert!(format!("{:?}", res.status()).contains("not funded group"));
 
     // fund draft group
-    let res = e.fund_draft_group(&e.owner, amount, 0);
+    let res = e.fund_draft_group(&e.owner, amount * 2, 0);
     let balance: WrappedBalance = res.unwrap_json();
-    assert_eq!(balance.0, amount);
+    assert_eq!(balance.0, amount * 2);
 
     // convert by anonymous
     let res = e.convert_draft(&users.bob, 0);
@@ -227,12 +230,13 @@ fn test_convert_draft() {
     assert!(res.is_none(), "expected converted draft to be deleted");
 
     let res = e.get_draft_group(0).unwrap();
-    assert!(
-        res.draft_indices.is_empty(),
+    assert_eq!(
+        res.draft_indices,
+        vec![1],
         "draft indices must be removed after convert"
     );
     assert_eq!(
-        res.total_amount, 0,
+        res.total_amount, amount,
         "draft amount must be subtracted from group"
     );
 
@@ -244,6 +248,16 @@ fn test_convert_draft() {
     let res = e.convert_draft(&users.bob, 0);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("draft not found"));
+
+    // converting second draft
+    let res = e.convert_draft(&users.bob, 1);
+    assert!(res.is_ok());
+
+    // draft group must be deleted
+    assert!(
+        e.get_draft_group(0).is_none(),
+        "draft indices must be removed after convert"
+    );
 }
 
 #[test]

@@ -46,7 +46,7 @@ impl FungibleTokenReceiver for Contract {
                 let draft_group_id = funding.draft_group_id;
                 let mut draft_group = self
                     .draft_groups
-                    .get(draft_group_id as _)
+                    .get(&draft_group_id as _)
                     .expect("draft group not found");
                 assert_eq!(
                     draft_group.total_amount, amount,
@@ -57,7 +57,7 @@ impl FungibleTokenReceiver for Contract {
                     "draft group already funded"
                 );
                 draft_group.beneficiary_id = Some(sender_id);
-                self.draft_groups.replace(draft_group_id as _, &draft_group);
+                self.draft_groups.insert(&draft_group_id as _, &draft_group);
                 log!("Funded draft group {}", draft_group_id);
             }
         }

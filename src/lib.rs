@@ -4,7 +4,7 @@ use near_contract_standards::fungible_token::core_impl::ext_fungible_token;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedSet, Vector};
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
@@ -73,7 +73,8 @@ pub struct Contract {
 
     pub next_draft_id: DraftIndex,
     pub drafts: LookupMap<DraftIndex, Draft>,
-    pub draft_groups: Vector<DraftGroup>,
+    pub next_draft_group_id: DraftGroupIndex,
+    pub draft_groups: UnorderedMap<DraftGroupIndex, DraftGroup>,
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -98,7 +99,8 @@ impl Contract {
             deposit_whitelist: deposit_whitelist_set,
             next_draft_id: 0,
             drafts: LookupMap::new(StorageKey::Drafts),
-            draft_groups: Vector::new(StorageKey::DraftGroups),
+            next_draft_group_id: 0,
+            draft_groups: UnorderedMap::new(StorageKey::DraftGroups),
         }
     }
 
@@ -216,8 +218,14 @@ impl Contract {
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {
         self.assert_deposit_whitelist(&env::predecessor_account_id());
 
-        let index: DraftGroupIndex = self.draft_groups.len() as _;
-        self.draft_groups.push(&DraftGroup::new());
+        let index = self.next_draft_group_id;
+        self.next_draft_group_id += 1;
+        assert!(
+            self.draft_groups
+                .insert(&index, &DraftGroup::new())
+                .is_none(),
+            "Invariant"
+        );
 
         index
     }
@@ -227,7 +235,7 @@ impl Contract {
         draft.assert_new_valid(&env::predecessor_account_id().try_into().unwrap());
         let mut draft_group = self
             .draft_groups
-            .get(draft.draft_group_id as _)
+            .get(&draft.draft_group_id as _)
             .expect("draft group not found");
         draft_group.assert_can_add_draft();
 
@@ -238,7 +246,7 @@ impl Contract {
         draft_group.total_amount += draft.total_balance();
         draft_group.draft_indices.insert(index);
         self.draft_groups
-            .replace(draft.draft_group_id as _, &draft_group);
+            .insert(&draft.draft_group_id as _, &draft_group);
 
         index
     }
@@ -254,7 +262,7 @@ impl Contract {
         let draft = self.drafts.remove(&draft_id).expect("draft not found");
         let mut draft_group = self
             .draft_groups
-            .get(draft.draft_group_id as _)
+            .get(&draft.draft_group_id as _)
             .expect("draft group not found");
         draft_group.assert_can_convert();
 
@@ -263,8 +271,13 @@ impl Contract {
         let amount = draft.total_balance();
         assert!(draft_group.total_amount >= amount, "Invariant");
         draft_group.total_amount -= amount;
-        self.draft_groups
-            .replace(draft.draft_group_id as _, &draft_group);
+
+        if draft_group.draft_indices.is_empty() {
+            self.draft_groups.remove(&draft.draft_group_id as _);
+        } else {
+            self.draft_groups
+                .insert(&draft.draft_group_id as _, &draft_group);
+        }
 
         let lockup = draft
             .lockup_create
