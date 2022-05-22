@@ -13,7 +13,7 @@ pub enum HashOrSchedule {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct TerminationConfig {
-    /// The account ID that can terminate vesting.
+    /// The account ID who will receive unvested balance upon termination
     pub beneficiary_id: ValidAccountId,
     /// An optional vesting schedule
     pub vesting_schedule: HashOrSchedule,
