@@ -23,6 +23,7 @@ impl Lockup {
         &mut self,
         initiator_id: &AccountId,
         hashed_schedule: Option<Schedule>,
+        termination_timestamp: TimestampSec,
     ) -> Balance {
         let termination_config = self
             .termination_config
@@ -34,7 +35,6 @@ impl Lockup {
             "Unauthorized"
         );
         let total_balance = self.schedule.total_balance();
-        let current_timestamp = current_timestamp_sec();
         let vested_balance = match &termination_config.vesting_schedule {
             None => &self.schedule,
             Some(HashOrSchedule::Hash(hash)) => {
@@ -53,7 +53,7 @@ impl Lockup {
             }
             Some(HashOrSchedule::Schedule(schedule)) => &schedule,
         }
-        .unlocked_balance(current_timestamp);
+        .unlocked_balance(termination_timestamp);
         let unvested_balance = total_balance - vested_balance;
         if unvested_balance > 0 {
             self.schedule.terminate(vested_balance);
