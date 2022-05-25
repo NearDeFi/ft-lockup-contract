@@ -159,13 +159,21 @@ impl Contract {
         &mut self,
         lockup_index: LockupIndex,
         hashed_schedule: Option<Schedule>,
+        termination_timestamp: Option<TimestampSec>,
     ) -> PromiseOrValue<WrappedBalance> {
         self.assert_deposit_whitelist(&env::predecessor_account_id());
         let mut lockup = self
             .lockups
             .get(lockup_index as _)
             .expect("Lockup not found");
-        let (unvested_balance, beneficiary_id) = lockup.terminate(hashed_schedule);
+        let current_timestamp = current_timestamp_sec();
+        let termination_timestamp = termination_timestamp.unwrap_or(current_timestamp);
+        assert!(
+            termination_timestamp >= current_timestamp,
+            "expected termination_timestamp >= now",
+        );
+        let (unvested_balance, beneficiary_id) =
+            lockup.terminate(hashed_schedule, termination_timestamp);
         self.lockups.replace(lockup_index as _, &lockup);
 
         // no need to store empty lockup

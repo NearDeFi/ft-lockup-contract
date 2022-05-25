@@ -282,7 +282,7 @@ impl Env {
 
     pub fn terminate(&self, user: &UserAccount, lockup_index: LockupIndex) -> ExecutionResult {
         user.function_call(
-            self.contract.contract.terminate(lockup_index, None),
+            self.contract.contract.terminate(lockup_index, None, None),
             TERMINATE_GAS,
             0,
         )
@@ -297,7 +297,22 @@ impl Env {
         user.function_call(
             self.contract
                 .contract
-                .terminate(lockup_index, Some(hashed_schedule)),
+                .terminate(lockup_index, Some(hashed_schedule), None),
+            TERMINATE_GAS,
+            0,
+        )
+    }
+
+    pub fn terminate_with_timestamp(
+        &self,
+        user: &UserAccount,
+        lockup_index: LockupIndex,
+        termination_timestamp: TimestampSec,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .terminate(lockup_index, None, Some(termination_timestamp)),
             TERMINATE_GAS,
             0,
         )

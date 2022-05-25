@@ -20,14 +20,17 @@ pub struct TerminationConfig {
 }
 
 impl Lockup {
-    pub fn terminate(&mut self, hashed_schedule: Option<Schedule>) -> (Balance, ValidAccountId) {
+    pub fn terminate(
+        &mut self,
+        hashed_schedule: Option<Schedule>,
+        termination_timestamp: TimestampSec,
+    ) -> (Balance, ValidAccountId) {
         let termination_config = self
             .termination_config
             .take()
             .expect("No termination config");
         let beneficiary_id = termination_config.beneficiary_id;
         let total_balance = self.schedule.total_balance();
-        let current_timestamp = current_timestamp_sec();
         let vested_balance = match &termination_config.vesting_schedule {
             HashOrSchedule::SameAsLockupSchedule => &self.schedule,
             HashOrSchedule::Hash(hash) => {
@@ -46,7 +49,7 @@ impl Lockup {
             }
             HashOrSchedule::Schedule(schedule) => &schedule,
         }
-        .unlocked_balance(current_timestamp);
+        .unlocked_balance(termination_timestamp);
         let unvested_balance = total_balance - vested_balance;
         if unvested_balance > 0 {
             self.schedule.terminate(vested_balance);
