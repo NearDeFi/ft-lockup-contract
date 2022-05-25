@@ -41,7 +41,8 @@ impl Lockup {
 
     pub fn claim(&mut self, index: LockupIndex, claim_amount: Balance) -> LockupClaim {
         let unlocked_balance = self.schedule.unlocked_balance(current_timestamp_sec());
-        let balance_claimed_new = self.claimed_balance + claim_amount;
+        let balance_claimed_new = self.claimed_balance.checked_add(claim_amount)
+            .expect("attempt to add with overflow");
         assert!(
             unlocked_balance >= balance_claimed_new,
             "too big claim_amount for lockup {}",
