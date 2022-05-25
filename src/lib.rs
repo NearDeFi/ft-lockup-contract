@@ -112,12 +112,13 @@ impl Contract {
             let amounts: HashMap<LockupIndex, WrappedBalance> = lockups_by_id
                 .iter()
                 .map(|(lockup_id, lockup)| {
-                    let unlocked_balance = lockup.schedule.unlocked_balance(current_timestamp_sec());
+                    let unlocked_balance =
+                        lockup.schedule.unlocked_balance(current_timestamp_sec());
                     let amount: WrappedBalance = (unlocked_balance - lockup.claimed_balance).into();
 
                     (lockup_id.clone(), amount)
                 })
-            .collect();
+                .collect();
             (amounts, lockups_by_id)
         };
 
