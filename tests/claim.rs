@@ -456,3 +456,48 @@ fn test_claim_lockups_with_specific_amounts_fail() {
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("too big claim_amount for lockup"));
 }
+
+#[test]
+fn test_claim_lockups_with_specific_amounts_overflow() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    let amount = d(60000, TOKEN_DECIMALS);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert!(lockups.is_empty());
+
+    let lockup = Lockup {
+        account_id: users.alice.valid_account_id(),
+        schedule: Schedule(vec![
+            Checkpoint {
+                timestamp: GENESIS_TIMESTAMP_SEC,
+                balance: 0,
+            },
+            Checkpoint {
+                timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+                balance: amount,
+            },
+        ]),
+        claimed_balance: 0,
+        termination_config: None,
+    };
+
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    assert_eq!(balance.0, amount);
+
+    // Set time to half unlock
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 2);
+
+    ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
+
+    // claim part
+    let res = e.claim_lockups(&users.alice, &vec![(0, (amount / 4).into())]);
+    assert!(res.is_ok());
+    let balance = e.ft_balance_of(&users.alice);
+    assert_eq!(balance, amount / 4);
+
+    // claim with overflow
+    let res = e.claim_lockups(&users.alice, &vec![(0, u128::MAX.into())]);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("attempt to add with overflow"));
+}
