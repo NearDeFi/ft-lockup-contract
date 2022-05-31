@@ -93,15 +93,35 @@ impl Contract {
 
     pub fn claim(
         &mut self,
-        amounts: Option<Vec<(LockupIndex, WrappedBalance)>>,
+        amounts: Option<Vec<(LockupIndex, Option<WrappedBalance>)>>,
     ) -> PromiseOrValue<WrappedBalance> {
         let account_id = env::predecessor_account_id();
 
         let (claim_amounts, mut lockups_by_id) = if let Some(amounts) = amounts {
-            let amounts: HashMap<LockupIndex, WrappedBalance> = amounts.into_iter().collect();
             let lockups_by_id: HashMap<LockupIndex, Lockup> = self
-                .internal_get_account_lockups_by_id(&account_id, &amounts.keys().cloned().collect())
+                .internal_get_account_lockups_by_id(
+                    &account_id,
+                    &amounts.iter().map(|x| x.0).collect(),
+                )
                 .into_iter()
+                .collect();
+            let amounts: HashMap<LockupIndex, WrappedBalance> = amounts
+                .into_iter()
+                .map(|(lockup_id, amount)| {
+                    (
+                        lockup_id,
+                        match amount {
+                            Some(amount) => amount,
+                            None => {
+                                let lockup =
+                                    lockups_by_id.get(&lockup_id).expect("lockup not found");
+                                let unlocked_balance =
+                                    lockup.schedule.unlocked_balance(current_timestamp_sec());
+                                (unlocked_balance - lockup.claimed_balance).into()
+                            }
+                        },
+                    )
+                })
                 .collect();
             (amounts, lockups_by_id)
         } else {

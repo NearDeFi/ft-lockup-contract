@@ -329,7 +329,7 @@ fn test_lockup_cliff_amazon() {
 }
 
 #[test]
-fn test_claim_lockups_with_specific_amounts_success() {
+fn test_claim_specific_lockups_with_specific_amounts_success() {
     let e = Env::init(None);
     let users = Users::init(&e);
     let amount = d(60000, TOKEN_DECIMALS);
@@ -357,40 +357,49 @@ fn test_claim_lockups_with_specific_amounts_success() {
     assert_eq!(balance.0, amount);
     let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
     assert_eq!(balance.0, amount);
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    assert_eq!(balance.0, amount);
 
     // Set time to half unlock
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 2);
     let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups.len(), 2);
+    assert_eq!(lockups.len(), 3);
     assert_eq!(lockups[0].1.claimed_balance, 0);
     assert_eq!(lockups[0].1.unclaimed_balance, amount / 2);
     assert_eq!(lockups[1].1.claimed_balance, 0);
     assert_eq!(lockups[1].1.unclaimed_balance, amount / 2);
+    assert_eq!(lockups[2].1.claimed_balance, 0);
+    assert_eq!(lockups[2].1.unclaimed_balance, amount / 2);
 
     ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
 
     // CLAIM
     let res: WrappedBalance = e
-        .claim_lockups(
+        .claim_specific_lockups(
             &users.alice,
-            &vec![(1, (amount / 3).into()), (0, (amount / 4).into())],
+            &vec![
+                (2, None),
+                (1, Some((amount / 3).into())),
+            ],
         )
         .unwrap_json();
-    assert_eq!(res.0, amount / 4 + amount / 3);
+    assert_eq!(res.0, amount / 3 + amount / 2);
 
     let lockups = e.get_account_lockups(&users.alice);
-    assert_eq!(lockups.len(), 2);
-    assert_eq!(lockups[0].1.claimed_balance, amount / 4);
-    assert_eq!(lockups[0].1.unclaimed_balance, amount / 4);
+    assert_eq!(lockups.len(), 3);
+    assert_eq!(lockups[0].1.claimed_balance, 0);
+    assert_eq!(lockups[0].1.unclaimed_balance, amount / 2);
     assert_eq!(lockups[1].1.claimed_balance, amount / 3);
     assert_eq!(lockups[1].1.unclaimed_balance, amount / 6);
+    assert_eq!(lockups[2].1.claimed_balance, amount / 2);
+    assert_eq!(lockups[2].1.unclaimed_balance, 0);
 
     let balance = e.ft_balance_of(&users.alice);
-    assert_eq!(balance, amount / 4 + amount / 3);
+    assert_eq!(balance, amount / 3 + amount / 2);
 }
 
 #[test]
-fn test_claim_lockups_with_specific_amounts_fail() {
+fn test_claim_specific_lockups_with_specific_amounts_fail() {
     let e = Env::init(None);
     let users = Users::init(&e);
     let amount = d(60000, TOKEN_DECIMALS);
@@ -419,46 +428,43 @@ fn test_claim_lockups_with_specific_amounts_fail() {
     let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
     assert_eq!(balance.0, amount);
 
+    ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
+
     // Set time to half unlock
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC / 2);
 
     // CLAIM not existing lockup
-    let res = e.claim_lockups(&users.bob, &vec![(9, (amount / 3).into())]);
+    let res = e.claim_specific_lockups(&users.bob, &vec![(9, Some((amount / 3).into()))]);
     assert!(!res.is_ok());
-    println!("{:#?}", res);
     assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
-
-    ft_storage_deposit(&users.bob, TOKEN_ID, &users.alice.account_id);
 
     // CLAIM by wrong user
-    let res = e.claim_lockups(
+    let res = e.claim_specific_lockups(
         &users.bob,
-        &vec![(1, (amount / 3).into()), (0, (amount / 4).into())],
+        &vec![(1, Some((amount / 3).into())), (0, Some((amount / 4).into()))],
     );
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
 
-    // CLAIM before storage deposit
-    let res = e.claim_lockups(
-        &users.alice,
-        &vec![(1, (amount * 2 / 3).into()), (0, (amount / 4).into())],
+    // CLAIM by wrong user without amount
+    let res = e.claim_specific_lockups(
+        &users.bob,
+        &vec![(1, None)],
     );
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("too big claim_amount for lockup"));
-
-    ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
+    assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
 
     // CLAIM with too big amount
-    let res = e.claim_lockups(
+    let res = e.claim_specific_lockups(
         &users.alice,
-        &vec![(1, (amount * 2 / 3).into()), (0, (amount / 4).into())],
+        &vec![(1, Some((amount * 2 / 3).into())), (0, Some((amount / 4).into()))],
     );
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("too big claim_amount for lockup"));
 }
 
 #[test]
-fn test_claim_lockups_with_specific_amounts_overflow() {
+fn test_claim_specific_lockups_overflow() {
     let e = Env::init(None);
     let users = Users::init(&e);
     let amount = d(60000, TOKEN_DECIMALS);
@@ -491,13 +497,13 @@ fn test_claim_lockups_with_specific_amounts_overflow() {
     ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
 
     // claim part
-    let res = e.claim_lockups(&users.alice, &vec![(0, (amount / 4).into())]);
+    let res = e.claim_specific_lockups(&users.alice, &vec![(0, Some((amount / 4).into()))]);
     assert!(res.is_ok());
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, amount / 4);
 
     // claim with overflow
-    let res = e.claim_lockups(&users.alice, &vec![(0, u128::MAX.into())]);
+    let res = e.claim_specific_lockups(&users.alice, &vec![(0, Some(u128::MAX.into()))]);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("attempt to add with overflow"));
 }
