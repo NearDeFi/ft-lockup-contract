@@ -34,7 +34,7 @@ fn test_terminate_basic_payer_logic() {
         vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
     };
 
-    // create lockup succeeds if terminator = payer
+    // create lockup succeeds
     let res = e.add_lockup(&users.eve, amount, &lockup_create);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount);
@@ -46,16 +46,16 @@ fn test_terminate_basic_payer_logic() {
     // receiver cannot terminate
     let res = e.terminate(&users.alice, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Unauthorized"));
 
     // random user cannot terminate
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     let res = e.terminate(&users.dude, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Unauthorized"));
 
-    // non-payer admin can terminate lockup, tokens return to the payer
-    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
+    // payer can terminate the lockup
+    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
     let balance = e.ft_balance_of(&users.eve);
     assert_eq!(balance, amount);

@@ -22,14 +22,19 @@ pub struct TerminationConfig {
 impl Lockup {
     pub fn terminate(
         &mut self,
+        initiator_id: &AccountId,
         hashed_schedule: Option<Schedule>,
         termination_timestamp: TimestampSec,
-    ) -> (Balance, ValidAccountId) {
+    ) -> Balance {
         let termination_config = self
             .termination_config
             .take()
             .expect("No termination config");
-        let beneficiary_id = termination_config.beneficiary_id;
+        assert_eq!(
+            termination_config.beneficiary_id.as_ref(),
+            initiator_id,
+            "Unauthorized"
+        );
         let total_balance = self.schedule.total_balance();
         let vested_balance = match &termination_config.vesting_schedule {
             HashOrSchedule::SameAsLockupSchedule => &self.schedule,
@@ -54,6 +59,6 @@ impl Lockup {
         if unvested_balance > 0 {
             self.schedule.terminate(vested_balance);
         }
-        (unvested_balance, beneficiary_id)
+        unvested_balance
     }
 }

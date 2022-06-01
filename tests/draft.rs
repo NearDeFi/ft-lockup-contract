@@ -437,7 +437,7 @@ fn test_draft_payer_update() {
         "expected beneficiary_id from draft group payer",
     );
 
-    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&users.dude, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, 0);
