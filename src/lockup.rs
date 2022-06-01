@@ -57,13 +57,13 @@ impl Lockup {
 
         if let Some(termination_config) = &self.termination_config {
             match &termination_config.vesting_schedule {
-                HashOrSchedule::SameAsLockupSchedule => {
+                VestingConditions::SameAsLockupSchedule => {
                     // Ok, using lockup schedule.
                 }
-                HashOrSchedule::Hash(_hash) => {
+                VestingConditions::Hash(_hash) => {
                     // Ok, using unknown hash. Can't verify.
                 }
-                HashOrSchedule::Schedule(schedule) => {
+                VestingConditions::Schedule(schedule) => {
                     schedule.assert_valid(total_balance);
                     self.schedule.assert_valid_termination_schedule(&schedule);
                 }
@@ -78,7 +78,7 @@ impl Lockup {
 pub struct LockupCreate {
     pub account_id: ValidAccountId,
     pub schedule: Schedule,
-    pub vesting_schedule: Option<HashOrSchedule>,
+    pub vesting_schedule: Option<VestingConditions>,
 }
 
 impl LockupCreate {

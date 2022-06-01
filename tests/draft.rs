@@ -403,7 +403,7 @@ fn test_draft_payer_update() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: schedule.clone(),
-        vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
+        vesting_schedule: Some(VestingConditions::Schedule(schedule.clone())),
     };
 
     let res = e.create_draft_group(&e.owner);

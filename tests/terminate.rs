@@ -31,7 +31,7 @@ fn test_terminate_basic_payer_logic() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: schedule.clone(),
-        vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
+        vesting_schedule: Some(VestingConditions::Schedule(schedule.clone())),
     };
 
     // create lockup succeeds
@@ -85,7 +85,7 @@ fn test_terminate_basic_payer_logic() {
     let lockup_create = LockupCreate {
         account_id: users.bob.valid_account_id(),
         schedule: schedule.clone(),
-        vesting_schedule: Some(HashOrSchedule::Schedule(schedule.clone())),
+        vesting_schedule: Some(VestingConditions::Schedule(schedule.clone())),
     };
     // creating lockup for user without storage deposit
     let res = e.add_lockup(&e.owner, amount, &lockup_create);
@@ -133,7 +133,7 @@ fn test_lockup_terminate_no_vesting_schedule() {
                 balance: amount,
             },
         ]),
-        vesting_schedule: Some(HashOrSchedule::SameAsLockupSchedule),
+        vesting_schedule: Some(VestingConditions::SameAsLockupSchedule),
     };
 
     let balance: WrappedBalance = e
@@ -225,7 +225,7 @@ fn test_lockup_terminate_custom_vesting_hash() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
+        vesting_schedule: Some(VestingConditions::Hash(vesting_hash)),
     };
 
     let balance: WrappedBalance = e
@@ -299,7 +299,7 @@ fn test_lockup_terminate_custom_vesting_invalid_hash() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Hash(vesting_hash)),
+        vesting_schedule: Some(VestingConditions::Hash(vesting_hash)),
     };
 
     let balance: WrappedBalance = e
@@ -362,7 +362,7 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Hash(incompatible_vesting_hash)),
+        vesting_schedule: Some(VestingConditions::Hash(incompatible_vesting_hash)),
     };
 
     let balance: WrappedBalance = e
@@ -404,7 +404,7 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
     let balance: WrappedBalance = e
@@ -467,7 +467,7 @@ fn test_lockup_terminate_custom_vesting_before_release() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
     let balance: WrappedBalance = e
@@ -553,7 +553,7 @@ fn test_lockup_terminate_custom_vesting_during_release() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
     let balance: WrappedBalance = e
@@ -641,7 +641,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
     let balance: WrappedBalance = e
@@ -728,7 +728,7 @@ fn test_lockup_terminate_custom_vesting_after_vesting_finished() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
     let balance: WrappedBalance = e

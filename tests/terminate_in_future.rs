@@ -20,7 +20,7 @@ fn test_lockup_terminate_with_timestamp_in_future() {
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
     let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup_create).unwrap_json();

@@ -57,7 +57,7 @@ pub struct LockupCreateView {
     #[serde(with = "u128_dec_format")]
     pub claimed_balance: Balance,
     /// An optional configuration that allows vesting/lockup termination.
-    pub vesting_schedule: Option<HashOrSchedule>,
+    pub vesting_schedule: Option<VestingConditions>,
 
     #[serde(with = "u128_dec_format")]
     pub total_balance: Balance,
