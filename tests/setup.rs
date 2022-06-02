@@ -5,7 +5,7 @@ pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance}
 use near_sdk::serde_json::json;
 use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
-use near_sdk_sim::{
+pub use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 

@@ -275,39 +275,47 @@ fn test_convert_drafts_batch() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
     let amount = d(60000, TOKEN_DECIMALS);
-    let drafts: Vec<Draft> = vec![&users.alice, &users.bob]
-        .iter()
-        .map(|user| {
-            let draft_group_id = 0;
-            Draft {
-                draft_group_id,
-                lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
-            }
-        })
-        .collect();
 
-    e.create_draft_group(&e.owner);
+    let build_draft = |draft_group_id, user: &UserAccount| {
+        Draft {
+            draft_group_id,
+            lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
+        }
+    };
 
-    let res = e.create_drafts(&e.owner, &drafts);
+    let group_0: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
+    let group_1: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
+
+    let res = e.create_drafts(&e.owner, &vec![
+        build_draft(group_0, &users.alice),
+        build_draft(group_0, &users.bob),
+        build_draft(group_1, &users.charlie),
+        build_draft(group_1, &users.dude),
+    ]);
     assert!(res.is_ok());
 
     // fund draft group
-    let res = e.fund_draft_group(&e.owner, amount * 2, 0);
+    let res = e.fund_draft_group(&e.owner, amount * 2, group_0);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount * 2);
+    let res = e.fund_draft_group(&e.owner, amount * 2, group_1);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount * 2);
 
     // convert by anonymous
-    let res = e.convert_drafts(&users.bob, &vec![0, 1]);
+    let res = e.convert_drafts(&users.eve, &vec![3, 0, 2, 1]);
     println!("{:#?}", res);
     assert!(res.is_ok());
-    let res: Vec<LockupIndex> = res.unwrap_json();
-    assert_eq!(res, vec![0, 1]);
+    let mut res: Vec<LockupIndex> = res.unwrap_json();
+    res.sort();
+    assert_eq!(res, vec![0, 1, 2, 3]);
 
-    let lockup = e.get_lockup(0);
-    assert_eq!(lockup.account_id, users.alice.valid_account_id());
-
-    let lockup = e.get_lockup(1);
-    assert_eq!(lockup.account_id, users.bob.valid_account_id());
+    let lockups = e.get_lockups_paged(None, None);
+    let mut account_ids: Vec<ValidAccountId> = lockups.into_iter().map(|x| x.1.account_id).collect();
+    account_ids.sort();
+    let expected: Vec<ValidAccountId> = vec![users.alice, users.bob, users.charlie, users.dude]
+        .iter().map(|x| x.valid_account_id()).collect();
+    assert_eq!(account_ids, expected, "wrong set of receivers");
 }
 
 #[test]
