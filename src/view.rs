@@ -195,6 +195,10 @@ impl Contract {
         self.next_draft_group_id
     }
 
+    pub fn get_num_draft_groups(&self) -> u32 {
+        self.draft_groups.len() as _
+    }
+
     pub fn get_draft_group(&self, index: DraftGroupIndex) -> Option<DraftGroupView> {
         self.draft_groups.get(&index as _).map(|group| group.into())
     }
@@ -206,8 +210,10 @@ impl Contract {
     ) -> Vec<(DraftGroupIndex, DraftGroupView)> {
         let from_index = from_index.unwrap_or(0);
         let to_index = to_index.unwrap_or(self.draft_groups.len() as _);
+        let keys = self.draft_groups.keys_as_vector();
+        let values = self.draft_groups.values_as_vector();
         (from_index..std::cmp::min(self.next_draft_group_id as _, to_index))
-            .filter_map(|index| self.get_draft_group(index).map(|group| (index, group)))
+            .map(|index| (keys.get(index as _).unwrap(), values.get(index as _).unwrap().into()))
             .collect()
     }
 

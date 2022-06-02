@@ -48,6 +48,14 @@ fn test_view_draft_groups() {
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].0, 1);
     assert!(result[0].1.draft_indices.is_empty());
+
+    let result = e.get_draft_groups_paged(Some(2), Some(5));
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].0, 2);
+
+    assert!(e.get_draft_groups_paged(Some(1), Some(1)).is_empty());
+    assert!(e.get_draft_groups_paged(Some(3), Some(1)).is_empty());
+    assert!(e.get_draft_groups_paged(Some(4), Some(5)).is_empty());
 }
 
 #[test]
@@ -202,10 +210,13 @@ fn test_convert_draft() {
     };
 
     assert_eq!(e.get_next_draft_group_id(), 0);
+    assert_eq!(e.get_num_draft_groups(), 0);
     e.create_draft_group(&e.owner);
     assert_eq!(e.get_next_draft_group_id(), 1);
+    assert_eq!(e.get_num_draft_groups(), 1);
     e.create_draft_group(&e.owner);
     assert_eq!(e.get_next_draft_group_id(), 2);
+    assert_eq!(e.get_num_draft_groups(), 2);
 
     // create draft 0
     let res = e.create_draft(&e.owner, &draft);
@@ -259,6 +270,10 @@ fn test_convert_draft() {
     assert_eq!(
         e.get_next_draft_group_id(), 2,
         "expected next_draft_group_id not changed after group remove",
+    );
+    assert_eq!(
+        e.get_num_draft_groups(), 1,
+        "expected num_draft_groups to decrease after group remove",
     );
 
     // draft group must be deleted

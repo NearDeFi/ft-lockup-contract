@@ -446,6 +446,12 @@ impl Env {
             .unwrap_json()
     }
 
+    pub fn get_num_draft_groups(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_num_draft_groups())
+            .unwrap_json()
+    }
+
     pub fn get_draft_group(&self, index: DraftGroupIndex) -> Option<DraftGroupView> {
         self.near
             .view_method_call(self.contract.contract.get_draft_group(index))
