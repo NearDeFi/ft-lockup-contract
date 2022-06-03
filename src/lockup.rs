@@ -8,7 +8,7 @@ pub type LockupIndex = u32;
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct LockupClaim {
     pub index: LockupIndex,
-    pub unclaimed_balance: WrappedBalance,
+    pub claim_amount: WrappedBalance,
     pub is_final: bool,
 }
 
@@ -39,15 +39,23 @@ impl Lockup {
         }
     }
 
-    pub fn claim(&mut self, index: LockupIndex) -> LockupClaim {
+    pub fn claim(&mut self, index: LockupIndex, claim_amount: Balance) -> LockupClaim {
         let unlocked_balance = self.schedule.unlocked_balance(current_timestamp_sec());
-        assert!(unlocked_balance >= self.claimed_balance, "Invariant");
-        let unclaimed_balance = unlocked_balance - self.claimed_balance;
-        self.claimed_balance = unlocked_balance;
+        let balance_claimed_new = self
+            .claimed_balance
+            .checked_add(claim_amount)
+            .expect("attempt to add with overflow");
+        assert!(
+            unlocked_balance >= balance_claimed_new,
+            "too big claim_amount for lockup {}",
+            index,
+        );
+
+        self.claimed_balance = balance_claimed_new;
         LockupClaim {
             index,
-            unclaimed_balance: unclaimed_balance.into(),
-            is_final: unlocked_balance == self.schedule.total_balance(),
+            claim_amount: claim_amount.into(),
+            is_final: balance_claimed_new == self.schedule.total_balance(),
         }
     }
 

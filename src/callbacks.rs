@@ -29,13 +29,13 @@ impl SelfCallbacks for Contract {
             for LockupClaim {
                 index,
                 is_final,
-                unclaimed_balance,
+                claim_amount,
             } in lockup_claims
             {
                 if is_final {
                     remove_indices.push(index);
                 }
-                total_balance += unclaimed_balance.0;
+                total_balance += claim_amount.0;
             }
             if !remove_indices.is_empty() {
                 let mut indices = self.account_lockups.get(&account_id).unwrap_or_default();
@@ -50,7 +50,7 @@ impl SelfCallbacks for Contract {
             let mut indices = self.account_lockups.get(&account_id).unwrap_or_default();
             for LockupClaim {
                 index,
-                unclaimed_balance,
+                claim_amount,
                 ..
             } in lockup_claims
             {
@@ -58,7 +58,7 @@ impl SelfCallbacks for Contract {
                     modified = true;
                 }
                 let mut lockup = self.lockups.get(index as _).unwrap();
-                lockup.claimed_balance -= unclaimed_balance.0;
+                lockup.claimed_balance -= claim_amount.0;
                 self.lockups.replace(index as _, &lockup);
             }
 
