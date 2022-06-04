@@ -241,31 +241,45 @@ impl Contract {
     }
 
     pub fn create_draft(&mut self, draft: Draft) -> DraftIndex {
-        self.assert_deposit_whitelist(&env::predecessor_account_id());
-        draft.assert_new_valid();
-        let mut draft_group = self
-            .draft_groups
-            .get(&draft.draft_group_id as _)
-            .expect("draft group not found");
-        draft_group.assert_can_add_draft();
-
-        let index = self.next_draft_id;
-        self.next_draft_id += 1;
-        assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
-
-        draft_group.total_amount += draft.total_balance();
-        draft_group.draft_indices.insert(index);
-        self.draft_groups
-            .insert(&draft.draft_group_id as _, &draft_group);
-
-        index
+        self.create_drafts(vec![draft])[0]
     }
 
     pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
-        drafts
-            .into_iter()
-            .map(|draft| self.create_draft(draft))
-            .collect()
+        self.assert_deposit_whitelist(&env::predecessor_account_id());
+
+        let mut draft_offsets_by_draft_group_id: HashMap<DraftGroupIndex, Vec<usize>> = HashMap::new();
+        drafts.iter().enumerate().for_each(|(offset, draft)| {
+            let value = draft_offsets_by_draft_group_id.entry(draft.draft_group_id).or_insert(vec![]);
+            value.push(offset.clone());
+        });
+        let mut draft_id_by_draft_offset: HashMap<usize, DraftIndex> = HashMap::new();
+        draft_offsets_by_draft_group_id.iter().for_each(|(draft_group_id, draft_offsets)| {
+            let mut draft_group = self
+                .draft_groups
+                .get(&draft_group_id as _)
+                .expect("draft group not found");
+            draft_group.assert_can_add_draft();
+
+            draft_offsets.iter().for_each(|draft_offset| {
+                let draft = drafts.get(draft_offset.clone()).unwrap();
+                draft.assert_new_valid();
+
+                let index = self.next_draft_id;
+                self.next_draft_id += 1;
+                assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
+                draft_id_by_draft_offset.insert(draft_offset.clone(), index);
+
+                draft_group.total_amount += draft.total_balance();
+                draft_group.draft_indices.insert(index);
+            });
+
+            self.draft_groups
+                .insert(&draft_group_id as _, &draft_group);
+        });
+
+        (0..drafts.len()).map(|offset|
+            draft_id_by_draft_offset.get(&offset).unwrap().clone()
+        ).collect()
     }
 
     pub fn convert_draft(&mut self, draft_id: DraftIndex) -> LockupIndex {
