@@ -155,12 +155,14 @@ impl Contract {
         }
     }
 
+    #[payable]
     pub fn terminate(
         &mut self,
         lockup_index: LockupIndex,
         hashed_schedule: Option<Schedule>,
         termination_timestamp: Option<TimestampSec>,
     ) -> PromiseOrValue<WrappedBalance> {
+        assert_one_yocto();
         let account_id = env::predecessor_account_id();
         let mut lockup = self
             .lockups
