@@ -206,6 +206,7 @@ impl Contract {
 
     pub fn get_draft_groups_paged(
         &self,
+        // not the draft_id, but internal index used inside the LookupMap struct
         from_index: Option<DraftGroupIndex>,
         to_index: Option<DraftGroupIndex>,
     ) -> Vec<(DraftGroupIndex, DraftGroupView)> {
