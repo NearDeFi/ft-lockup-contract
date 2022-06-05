@@ -342,7 +342,7 @@ impl Contract {
                             .get(&draft.draft_group_id as _)
                             .expect("draft group not found")
                     });
-                draft_group.assert_can_convert();
+                draft_group.assert_can_convert_draft();
                 let beneficiary_id = draft_group
                     .beneficiary_id
                     .as_mut()

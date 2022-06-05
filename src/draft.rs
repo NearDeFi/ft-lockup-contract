@@ -48,7 +48,7 @@ impl DraftGroup {
         );
     }
 
-    pub fn assert_can_convert(&self) {
+    pub fn assert_can_convert_draft(&self) {
         assert!(
             self.beneficiary_id.is_some(),
             "cannot convert draft from not funded group"
