@@ -268,11 +268,13 @@ fn test_convert_draft() {
     assert!(res.is_ok());
 
     assert_eq!(
-        e.get_next_draft_group_id(), 2,
+        e.get_next_draft_group_id(),
+        2,
         "expected next_draft_group_id not changed after group remove",
     );
     assert_eq!(
-        e.get_num_draft_groups(), 1,
+        e.get_num_draft_groups(),
+        1,
         "expected num_draft_groups to decrease after group remove",
     );
 
@@ -291,22 +293,23 @@ fn test_convert_drafts_batch() {
 
     let amount = d(60000, TOKEN_DECIMALS);
 
-    let build_draft = |draft_group_id, user: &UserAccount| {
-        Draft {
-            draft_group_id,
-            lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
-        }
+    let build_draft = |draft_group_id, user: &UserAccount| Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
     };
 
     let group_0: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
     let group_1: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
 
-    let res = e.create_drafts(&e.owner, &vec![
-        build_draft(group_0, &users.alice),
-        build_draft(group_0, &users.bob),
-        build_draft(group_1, &users.charlie),
-        build_draft(group_1, &users.dude),
-    ]);
+    let res = e.create_drafts(
+        &e.owner,
+        &vec![
+            build_draft(group_0, &users.alice),
+            build_draft(group_0, &users.bob),
+            build_draft(group_1, &users.charlie),
+            build_draft(group_1, &users.dude),
+        ],
+    );
     assert!(res.is_ok());
 
     // fund draft group
@@ -326,10 +329,13 @@ fn test_convert_drafts_batch() {
     assert_eq!(res, vec![0, 1, 2, 3]);
 
     let lockups = e.get_lockups_paged(None, None);
-    let mut account_ids: Vec<ValidAccountId> = lockups.into_iter().map(|x| x.1.account_id).collect();
+    let mut account_ids: Vec<ValidAccountId> =
+        lockups.into_iter().map(|x| x.1.account_id).collect();
     account_ids.sort();
     let expected: Vec<ValidAccountId> = vec![users.alice, users.bob, users.charlie, users.dude]
-        .iter().map(|x| x.valid_account_id()).collect();
+        .iter()
+        .map(|x| x.valid_account_id())
+        .collect();
     assert_eq!(account_ids, expected, "wrong set of receivers");
 }
 

@@ -23,7 +23,9 @@ fn test_lockup_terminate_with_timestamp_in_future() {
         vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&users.eve, amount, &lockup_create).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);

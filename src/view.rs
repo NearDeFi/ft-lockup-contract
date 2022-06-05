@@ -213,7 +213,12 @@ impl Contract {
         let keys = self.draft_groups.keys_as_vector();
         let values = self.draft_groups.values_as_vector();
         (from_index..std::cmp::min(self.next_draft_group_id as _, to_index))
-            .map(|index| (keys.get(index as _).unwrap(), values.get(index as _).unwrap().into()))
+            .map(|index| {
+                (
+                    keys.get(index as _).unwrap(),
+                    values.get(index as _).unwrap().into(),
+                )
+            })
             .collect()
     }
 

@@ -13,7 +13,7 @@ pub use ft_lockup::draft::{Draft, DraftGroupIndex, DraftIndex};
 use ft_lockup::ft_token_receiver::DraftGroupFunding;
 pub use ft_lockup::lockup::{Lockup, LockupCreate, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
-pub use ft_lockup::termination::{VestingConditions, TerminationConfig};
+pub use ft_lockup::termination::{TerminationConfig, VestingConditions};
 use ft_lockup::view::{DraftGroupView, DraftView, LockupView};
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
