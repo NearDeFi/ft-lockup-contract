@@ -309,7 +309,10 @@ impl Contract {
                 let index = self.next_draft_id;
                 self.next_draft_id += 1;
                 assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
-                draft_group.total_amount += draft.total_balance();
+                draft_group.total_amount = draft_group
+                    .total_amount
+                    .checked_add(draft.total_balance())
+                    .expect("attempt to add with overflow");
                 draft_group.draft_indices.insert(index);
 
                 index
