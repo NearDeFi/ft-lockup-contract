@@ -96,16 +96,18 @@ pub struct DraftGroupView {
     #[serde(default)]
     #[serde(with = "u128_dec_format")]
     pub total_amount: Balance,
-    pub funded: bool,
+    pub payer_id: Option<ValidAccountId>,
     pub draft_indices: Vec<DraftIndex>,
+    pub funded: bool,
 }
 
 impl From<DraftGroup> for DraftGroupView {
     fn from(draft_group: DraftGroup) -> Self {
         Self {
             total_amount: draft_group.total_amount,
-            funded: draft_group.beneficiary_id.is_some(),
+            payer_id: draft_group.payer_id.clone(),
             draft_indices: draft_group.draft_indices.into_iter().collect(),
+            funded: draft_group.payer_id.is_some(),
         }
     }
 }

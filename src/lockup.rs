@@ -98,7 +98,7 @@ impl LockupCreate {
         }
     }
 
-    pub fn into_lockup(&self, beneficiary_id: &ValidAccountId) -> Lockup {
+    pub fn into_lockup(&self, payer_id: &ValidAccountId) -> Lockup {
         let vesting_schedule = self.vesting_schedule.clone();
         Lockup {
             account_id: self.account_id.clone(),
@@ -107,7 +107,7 @@ impl LockupCreate {
             termination_config: match vesting_schedule {
                 None => None,
                 Some(vesting_schedule) => Some(TerminationConfig {
-                    beneficiary_id: beneficiary_id.clone(),
+                    payer_id: payer_id.clone(),
                     vesting_schedule,
                 }),
             },

@@ -461,9 +461,9 @@ fn test_draft_payer_update() {
             .termination_config
             .as_ref()
             .expect("expected termination_config")
-            .beneficiary_id,
+            .payer_id,
         users.dude.valid_account_id(),
-        "expected beneficiary_id from draft group payer",
+        "expected payer_id from draft group payer",
     );
 
     let res: WrappedBalance = e.terminate(&users.dude, lockup_index).unwrap_json();

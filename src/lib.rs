@@ -343,8 +343,8 @@ impl Contract {
                             .expect("draft group not found")
                     });
                 draft_group.assert_can_convert_draft();
-                let beneficiary_id = draft_group
-                    .beneficiary_id
+                let payer_id = draft_group
+                    .payer_id
                     .as_mut()
                     .expect("expected present draft_group_id");
 
@@ -353,7 +353,7 @@ impl Contract {
                 assert!(draft_group.total_amount >= amount, "Invariant");
                 draft_group.total_amount -= amount;
 
-                let lockup = draft.lockup_create.into_lockup(&beneficiary_id);
+                let lockup = draft.lockup_create.into_lockup(&payer_id);
                 let index = self.internal_add_lockup(&lockup);
                 log!(
                     "Created new lockup for {} with index {} from draft {}",

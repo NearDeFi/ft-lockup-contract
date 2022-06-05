@@ -13,8 +13,9 @@ pub enum VestingConditions {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct TerminationConfig {
-    /// The account ID who will receive unvested balance upon termination
-    pub beneficiary_id: ValidAccountId,
+    /// The account ID who paid for the lockup creation
+    /// and will receive unvested balance upon termination
+    pub payer_id: ValidAccountId,
     /// An optional vesting schedule
     pub vesting_schedule: VestingConditions,
 }
@@ -31,7 +32,7 @@ impl Lockup {
             .take()
             .expect("No termination config");
         assert_eq!(
-            termination_config.beneficiary_id.as_ref(),
+            termination_config.payer_id.as_ref(),
             initiator_id,
             "Unauthorized"
         );
