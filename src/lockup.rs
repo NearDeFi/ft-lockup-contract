@@ -89,15 +89,18 @@ pub struct LockupCreate {
     pub vesting_schedule: Option<VestingConditions>,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl LockupCreate {
-    pub fn new_unlocked(account_id: AccountId, total_balance: Balance) -> Self {
+    pub fn new_unlocked(account_id: ValidAccountId, total_balance: Balance) -> Self {
         Self {
-            account_id: account_id.try_into().unwrap(),
+            account_id,
             schedule: Schedule::new_unlocked(total_balance),
             vesting_schedule: None,
         }
     }
+}
 
+impl LockupCreate {
     pub fn into_lockup(&self, payer_id: &ValidAccountId) -> Lockup {
         let vesting_schedule = self.vesting_schedule.clone();
         Lockup {

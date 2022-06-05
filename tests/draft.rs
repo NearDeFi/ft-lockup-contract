@@ -68,7 +68,7 @@ fn test_create_draft() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
     let res = e.create_draft(&e.owner, &draft);
@@ -114,7 +114,7 @@ fn test_create_drafts_batch() {
             let draft_group_id = 0;
             Draft {
                 draft_group_id,
-                lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
+                lockup_create: LockupCreate::new_unlocked(user.valid_account_id(), amount),
             }
         })
         .collect();
@@ -149,7 +149,7 @@ fn test_fund_draft_group() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
     e.create_draft_group(&e.owner);
@@ -206,7 +206,7 @@ fn test_convert_draft() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
     assert_eq!(e.get_next_draft_group_id(), 0);
@@ -295,7 +295,7 @@ fn test_convert_drafts_batch() {
 
     let build_draft = |draft_group_id, user: &UserAccount| Draft {
         draft_group_id,
-        lockup_create: LockupCreate::new_unlocked(user.account_id.clone(), amount),
+        lockup_create: LockupCreate::new_unlocked(user.valid_account_id(), amount),
     };
 
     let group_0: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
@@ -349,7 +349,7 @@ fn test_view_drafts() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
     e.create_draft_group(&e.owner);
@@ -382,7 +382,7 @@ fn test_create_via_draft_batches_and_claim() {
     let draft_group_id = 0;
     let draft = Draft {
         draft_group_id,
-        lockup_create: LockupCreate::new_unlocked(users.alice.account_id.clone(), amount),
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
     e.create_draft_group(&e.owner);
