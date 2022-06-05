@@ -104,38 +104,84 @@ impl Contract {
         }
     }
 
-    pub fn claim(&mut self) -> PromiseOrValue<WrappedBalance> {
+    pub fn claim(
+        &mut self,
+        amounts: Option<Vec<(LockupIndex, Option<WrappedBalance>)>>,
+    ) -> PromiseOrValue<WrappedBalance> {
         let account_id = env::predecessor_account_id();
-        let lockups = self.internal_get_account_lockups(&account_id);
 
-        if lockups.is_empty() {
-            return PromiseOrValue::Value(0.into());
-        }
+        let (claim_amounts, mut lockups_by_id) = if let Some(amounts) = amounts {
+            let lockups_by_id: HashMap<LockupIndex, Lockup> = self
+                .internal_get_account_lockups_by_id(
+                    &account_id,
+                    &amounts.iter().map(|x| x.0).collect(),
+                )
+                .into_iter()
+                .collect();
+            let amounts: HashMap<LockupIndex, WrappedBalance> = amounts
+                .into_iter()
+                .map(|(lockup_id, amount)| {
+                    (
+                        lockup_id,
+                        match amount {
+                            Some(amount) => amount,
+                            None => {
+                                let lockup =
+                                    lockups_by_id.get(&lockup_id).expect("lockup not found");
+                                let unlocked_balance =
+                                    lockup.schedule.unlocked_balance(current_timestamp_sec());
+                                (unlocked_balance - lockup.claimed_balance).into()
+                            }
+                        },
+                    )
+                })
+                .collect();
+            (amounts, lockups_by_id)
+        } else {
+            let lockups_by_id: HashMap<LockupIndex, Lockup> = self
+                .internal_get_account_lockups(&account_id)
+                .into_iter()
+                .collect();
+            let amounts: HashMap<LockupIndex, WrappedBalance> = lockups_by_id
+                .iter()
+                .map(|(lockup_id, lockup)| {
+                    let unlocked_balance =
+                        lockup.schedule.unlocked_balance(current_timestamp_sec());
+                    let amount: WrappedBalance = (unlocked_balance - lockup.claimed_balance).into();
 
+                    (lockup_id.clone(), amount)
+                })
+                .collect();
+            (amounts, lockups_by_id)
+        };
+
+        let account_id = env::predecessor_account_id();
         let mut lockup_claims = vec![];
-        let mut total_unclaimed_balance = 0;
-        for (lockup_index, mut lockup) in lockups {
-            let lockup_claim = lockup.claim(lockup_index);
-            if lockup_claim.unclaimed_balance.0 > 0 {
+        let mut total_claim_amount = 0;
+        for (lockup_index, lockup_claim_amount) in claim_amounts {
+            let lockup = lockups_by_id.get_mut(&lockup_index).unwrap();
+            let lockup_claim = lockup.claim(lockup_index, lockup_claim_amount.0);
+
+            if lockup_claim.claim_amount.0 > 0 {
                 log!(
                     "Claiming {} form lockup #{}",
-                    lockup_claim.unclaimed_balance.0,
+                    lockup_claim.claim_amount.0,
                     lockup_index
                 );
-                total_unclaimed_balance += lockup_claim.unclaimed_balance.0;
+                total_claim_amount += lockup_claim.claim_amount.0;
                 self.lockups.replace(lockup_index as _, &lockup);
                 lockup_claims.push(lockup_claim);
             }
         }
-        log!("Total claim {}", total_unclaimed_balance);
+        log!("Total claim {}", total_claim_amount);
 
-        if total_unclaimed_balance > 0 {
+        if total_claim_amount > 0 {
             ext_fungible_token::ft_transfer(
                 account_id.clone(),
-                total_unclaimed_balance.into(),
+                total_claim_amount.into(),
                 Some(format!(
                     "Claiming unlocked {} balance from {}",
-                    total_unclaimed_balance,
+                    total_claim_amount,
                     env::current_account_id()
                 )),
                 &self.token_account_id,
