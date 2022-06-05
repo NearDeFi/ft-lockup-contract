@@ -247,30 +247,34 @@ impl Contract {
     pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
         self.assert_deposit_whitelist(&env::predecessor_account_id());
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
-        let draft_ids: Vec<DraftIndex> = drafts.iter().map (|draft| {
-            let draft_group = draft_group_lookup
-                .entry(draft.draft_group_id)
-                .or_insert_with(||
-                    self
-                        .draft_groups
-                        .get(&draft.draft_group_id as _)
-                        .expect("draft group not found")
-                );
-            draft_group.assert_can_add_draft();
-            draft.assert_new_valid();
+        let draft_ids: Vec<DraftIndex> = drafts
+            .iter()
+            .map(|draft| {
+                let draft_group = draft_group_lookup
+                    .entry(draft.draft_group_id)
+                    .or_insert_with(|| {
+                        self.draft_groups
+                            .get(&draft.draft_group_id as _)
+                            .expect("draft group not found")
+                    });
+                draft_group.assert_can_add_draft();
+                draft.assert_new_valid();
 
-            let index = self.next_draft_id;
-            self.next_draft_id += 1;
-            assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
-            draft_group.total_amount += draft.total_balance();
-            draft_group.draft_indices.insert(index);
+                let index = self.next_draft_id;
+                self.next_draft_id += 1;
+                assert!(self.drafts.insert(&index, &draft).is_none(), "Invariant");
+                draft_group.total_amount += draft.total_balance();
+                draft_group.draft_indices.insert(index);
 
-            index
-        }).collect();
+                index
+            })
+            .collect();
 
-        draft_group_lookup.iter().for_each(|(draft_group_id, draft_group)| {
-            self.draft_groups.insert(&draft_group_id as _, &draft_group);
-        });
+        draft_group_lookup
+            .iter()
+            .for_each(|(draft_group_id, draft_group)| {
+                self.draft_groups.insert(&draft_group_id as _, &draft_group);
+            });
 
         draft_ids
     }
@@ -280,52 +284,45 @@ impl Contract {
     }
 
     pub fn convert_drafts(&mut self, draft_ids: Vec<DraftIndex>) -> Vec<LockupIndex> {
-        // no need to check for uniqueness since drafts are removed
-        let draft_by_id: HashMap<DraftIndex, Draft> = draft_ids
+        let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let lockup_ids: Vec<LockupIndex> = draft_ids
             .iter()
             .map(|draft_id| {
-                (
-                    draft_id.clone(),
-                    self.drafts.remove(&draft_id).expect("draft not found"),
-                )
+                let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
+                let draft_group = draft_group_lookup
+                    .entry(draft.draft_group_id)
+                    .or_insert_with(|| {
+                        self.draft_groups
+                            .get(&draft.draft_group_id as _)
+                            .expect("draft group not found")
+                    });
+                draft_group.assert_can_convert();
+                let beneficiary_id = draft_group
+                    .beneficiary_id
+                    .as_mut()
+                    .expect("expected present draft_group_id");
+
+                assert!(draft_group.draft_indices.remove(&draft_id), "Invariant");
+                let amount = draft.total_balance();
+                assert!(draft_group.total_amount >= amount, "Invariant");
+                draft_group.total_amount -= amount;
+
+                let lockup = draft.lockup_create.into_lockup(&beneficiary_id);
+                let index = self.internal_add_lockup(&lockup);
+                log!(
+                    "Created new lockup for {} with index {} from draft {}",
+                    lockup.account_id.as_ref(),
+                    index,
+                    draft_id,
+                );
+
+                index
             })
             .collect();
-        let mut draft_ids_by_draft_group_id: HashMap<DraftGroupIndex, Vec<DraftIndex>> =
-            HashMap::new();
-        draft_by_id.iter().for_each(|(draft_id, draft)| {
-            let value = draft_ids_by_draft_group_id
-                .entry(draft.draft_group_id)
-                .or_insert(vec![]);
-            value.push(draft_id.clone());
-        });
-        let mut lockup_id_by_draft_id: HashMap<DraftIndex, LockupIndex> = HashMap::new();
-        draft_ids_by_draft_group_id
+
+        draft_group_lookup
             .iter()
-            .for_each(|(draft_group_id, draft_ids)| {
-                let mut draft_group = self
-                    .draft_groups
-                    .get(&draft_group_id as _)
-                    .expect("draft group not found");
-                draft_group.assert_can_convert();
-                let beneficiary_id = draft_group.beneficiary_id.clone().unwrap();
-                draft_ids.iter().for_each(|draft_id| {
-                    let draft = draft_by_id.get(draft_id).unwrap();
-                    assert!(draft_group.draft_indices.remove(&draft_id), "Invariant");
-                    let amount = draft.total_balance();
-                    assert!(draft_group.total_amount >= amount, "Invariant");
-                    draft_group.total_amount -= amount;
-
-                    let lockup = draft.lockup_create.into_lockup(&beneficiary_id);
-                    let index = self.internal_add_lockup(&lockup);
-                    lockup_id_by_draft_id.insert(draft_id.clone(), index);
-                    log!(
-                        "Created new lockup for {} with index {} from draft {}",
-                        lockup.account_id.as_ref(),
-                        index,
-                        draft_id,
-                    );
-                });
-
+            .for_each(|(draft_group_id, draft_group)| {
                 if draft_group.draft_indices.is_empty() {
                     self.draft_groups.remove(&draft_group_id as _);
                 } else {
@@ -333,10 +330,6 @@ impl Contract {
                 }
             });
 
-        draft_ids
-            .iter()
-            .map(|draft_id| lockup_id_by_draft_id.get(draft_id).unwrap().clone())
-            .collect()
-        // index
+        lockup_ids
     }
 }
