@@ -52,12 +52,11 @@ impl From<Lockup> for LockupView {
 pub struct LockupCreateView {
     pub account_id: ValidAccountId,
     pub schedule: Schedule,
+    pub vesting_schedule: Option<VestingConditions>,
 
     #[serde(default)]
     #[serde(with = "u128_dec_format")]
     pub claimed_balance: Balance,
-    /// An optional configuration that allows vesting/lockup termination.
-    pub vesting_schedule: Option<VestingConditions>,
 
     #[serde(with = "u128_dec_format")]
     pub total_balance: Balance,
@@ -80,8 +79,8 @@ impl From<LockupCreate> for LockupCreateView {
         Self {
             account_id,
             schedule,
-            claimed_balance: 0,
             vesting_schedule,
+            claimed_balance: 0,
             total_balance,
             unclaimed_balance,
             timestamp,
