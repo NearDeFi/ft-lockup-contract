@@ -349,7 +349,7 @@ impl Contract {
                 let payer_id = draft_group
                     .payer_id
                     .as_mut()
-                    .expect("expected present draft_group_id");
+                    .expect("expected present payer_id");
 
                 assert!(draft_group.draft_indices.remove(&draft_id), "Invariant");
                 let amount = draft.total_balance();
