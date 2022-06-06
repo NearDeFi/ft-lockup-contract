@@ -12,7 +12,7 @@ pub struct LockupClaim {
     pub is_final: bool,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[derive(BorshDeserialize, BorshSerialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct Lockup {
