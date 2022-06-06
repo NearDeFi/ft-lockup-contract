@@ -241,7 +241,8 @@ fn test_convert_draft() {
     // convert by anonymous
     let res = e.convert_draft(&users.bob, 0);
     assert_eq!(
-        e.get_next_draft_id(), 2,
+        e.get_next_draft_id(),
+        2,
         "expected next_draft_id not changed after draft convert",
     );
     assert!(res.is_ok());
@@ -272,7 +273,8 @@ fn test_convert_draft() {
     // converting second draft
     let res = e.convert_draft(&users.bob, 1);
     assert_eq!(
-        e.get_next_draft_id(), 2,
+        e.get_next_draft_id(),
+        2,
         "expected next_draft_id not changed after draft convert",
     );
     assert!(res.is_ok());
