@@ -57,7 +57,6 @@ pub struct LockupCreateView {
     #[serde(default)]
     #[serde(with = "u128_dec_format")]
     pub claimed_balance: Balance,
-
     #[serde(with = "u128_dec_format")]
     pub total_balance: Balance,
     #[serde(with = "u128_dec_format")]
@@ -194,6 +193,10 @@ impl Contract {
 
     pub fn get_next_draft_group_id(&self) -> DraftGroupIndex {
         self.next_draft_group_id
+    }
+
+    pub fn get_next_draft_id(&self) -> DraftGroupIndex {
+        self.next_draft_id
     }
 
     pub fn get_num_draft_groups(&self) -> u32 {

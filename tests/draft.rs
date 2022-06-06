@@ -218,11 +218,14 @@ fn test_convert_draft() {
     assert_eq!(e.get_next_draft_group_id(), 2);
     assert_eq!(e.get_num_draft_groups(), 2);
 
+    assert_eq!(e.get_next_draft_id(), 0);
     // create draft 0
     let res = e.create_draft(&e.owner, &draft);
+    assert_eq!(e.get_next_draft_id(), 1);
     assert!(res.is_ok());
     // create draft 1
     let res = e.create_draft(&e.owner, &draft);
+    assert_eq!(e.get_next_draft_id(), 2);
     assert!(res.is_ok());
 
     // try convert before fund
@@ -237,6 +240,10 @@ fn test_convert_draft() {
 
     // convert by anonymous
     let res = e.convert_draft(&users.bob, 0);
+    assert_eq!(
+        e.get_next_draft_id(), 2,
+        "expected next_draft_id not changed after draft convert",
+    );
     assert!(res.is_ok());
     let res: DraftIndex = res.unwrap_json();
     assert_eq!(res, 0);
@@ -257,7 +264,6 @@ fn test_convert_draft() {
     let lockup = e.get_lockup(0);
     assert_eq!(lockup.account_id, users.alice.valid_account_id());
     assert_eq!(lockup.total_balance, amount);
-
     // try to convert again
     let res = e.convert_draft(&users.bob, 0);
     assert!(!res.is_ok());
@@ -265,6 +271,10 @@ fn test_convert_draft() {
 
     // converting second draft
     let res = e.convert_draft(&users.bob, 1);
+    assert_eq!(
+        e.get_next_draft_id(), 2,
+        "expected next_draft_id not changed after draft convert",
+    );
     assert!(res.is_ok());
 
     assert_eq!(
