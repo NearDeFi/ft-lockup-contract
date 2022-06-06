@@ -237,7 +237,7 @@ impl Contract {
 
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
-                account_id.clone().into(),
+                account_id.clone(),
                 unvested_balance.into(),
                 Some(format!("Terminated lockup #{}", lockup_index)),
                 &self.token_account_id,
@@ -245,7 +245,7 @@ impl Contract {
                 GAS_FOR_FT_TRANSFER,
             )
             .then(ext_self::after_lockup_termination(
-                account_id.clone().into(),
+                account_id,
                 unvested_balance.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,
