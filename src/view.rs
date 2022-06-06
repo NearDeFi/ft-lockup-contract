@@ -90,7 +90,6 @@ impl From<LockupCreate> for LockupCreateView {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Deserialize))]
 pub struct DraftGroupView {
-    #[serde(default)]
     #[serde(with = "u128_dec_format")]
     pub total_amount: Balance,
     pub payer_id: Option<ValidAccountId>,
