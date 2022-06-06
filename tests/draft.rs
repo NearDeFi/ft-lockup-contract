@@ -433,6 +433,10 @@ fn test_draft_payer_update() {
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     e.ft_transfer(&e.owner, amount, &users.dude);
 
+    let res = e.create_draft_group(&e.owner);
+    assert!(res.is_ok());
+    let draft_group_id = 0;
+
     let schedule = Schedule(vec![
         Checkpoint {
             timestamp: GENESIS_TIMESTAMP_SEC,
@@ -449,10 +453,6 @@ fn test_draft_payer_update() {
         schedule: schedule.clone(),
         vesting_schedule: Some(VestingConditions::Schedule(schedule.clone())),
     };
-
-    let res = e.create_draft_group(&e.owner);
-    assert!(res.is_ok());
-    let draft_group_id = 0;
 
     let draft = Draft {
         draft_group_id,
