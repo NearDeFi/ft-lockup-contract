@@ -110,7 +110,7 @@ impl LockupCreate {
             termination_config: match vesting_schedule {
                 None => None,
                 Some(vesting_schedule) => Some(TerminationConfig {
-                    payer_id: payer_id.clone(),
+                    beneficiary_id: payer_id.clone(),
                     vesting_schedule,
                 }),
             },
