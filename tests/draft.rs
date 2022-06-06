@@ -134,9 +134,12 @@ fn test_create_drafts_batch() {
     assert_eq!(res.total_amount, amount * 2);
 
     let draft = e.get_draft(0).unwrap();
-    assert_eq!(draft.lockup.account_id, users.alice.valid_account_id());
+    assert_eq!(
+        draft.lockup_create.account_id,
+        users.alice.valid_account_id()
+    );
     let draft = e.get_draft(1).unwrap();
-    assert_eq!(draft.lockup.account_id, users.bob.valid_account_id());
+    assert_eq!(draft.lockup_create.account_id, users.bob.valid_account_id());
 }
 
 #[test]
@@ -381,7 +384,7 @@ fn test_view_drafts() {
     assert_eq!(res[0].0, 2);
     let draft = &res[0].1;
     assert_eq!(draft.draft_group_id, 0);
-    assert_eq!(draft.lockup.total_balance, amount);
+    assert_eq!(draft.lockup_create.total_balance, amount);
 }
 
 #[test]
