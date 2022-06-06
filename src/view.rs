@@ -54,7 +54,6 @@ pub struct LockupCreateView {
     pub schedule: Schedule,
     pub vesting_schedule: Option<VestingConditions>,
 
-    #[serde(default)]
     #[serde(with = "u128_dec_format")]
     pub claimed_balance: Balance,
     #[serde(with = "u128_dec_format")]
