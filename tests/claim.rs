@@ -10,7 +10,7 @@ fn test_lockup_claim_logic() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -22,10 +22,9 @@ fn test_lockup_claim_logic() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -87,7 +86,7 @@ fn test_lockup_linear() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -99,10 +98,9 @@ fn test_lockup_linear() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -216,7 +214,7 @@ fn test_lockup_cliff_amazon() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -240,10 +238,9 @@ fn test_lockup_cliff_amazon() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -337,7 +334,7 @@ fn test_claim_specific_lockups_with_specific_amounts_success() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -349,15 +346,14 @@ fn test_claim_specific_lockups_with_specific_amounts_success() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
 
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
 
     // Set time to half unlock
@@ -377,10 +373,7 @@ fn test_claim_specific_lockups_with_specific_amounts_success() {
     let res: WrappedBalance = e
         .claim_specific_lockups(
             &users.alice,
-            &vec![
-                (2, None),
-                (1, Some((amount / 3).into())),
-            ],
+            &vec![(2, None), (1, Some((amount / 3).into()))],
         )
         .unwrap_json();
     assert_eq!(res.0, amount / 3 + amount / 2);
@@ -407,7 +400,7 @@ fn test_claim_specific_lockups_with_specific_amounts_fail() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -419,13 +412,12 @@ fn test_claim_specific_lockups_with_specific_amounts_fail() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
 
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
 
     ft_storage_deposit(&users.alice, TOKEN_ID, &users.alice.account_id);
@@ -441,23 +433,26 @@ fn test_claim_specific_lockups_with_specific_amounts_fail() {
     // CLAIM by wrong user
     let res = e.claim_specific_lockups(
         &users.bob,
-        &vec![(1, Some((amount / 3).into())), (0, Some((amount / 4).into()))],
+        &vec![
+            (1, Some((amount / 3).into())),
+            (0, Some((amount / 4).into())),
+        ],
     );
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
 
     // CLAIM by wrong user without amount
-    let res = e.claim_specific_lockups(
-        &users.bob,
-        &vec![(1, None)],
-    );
+    let res = e.claim_specific_lockups(&users.bob, &vec![(1, None)]);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("lockup not found for account"));
 
     // CLAIM with too big amount
     let res = e.claim_specific_lockups(
         &users.alice,
-        &vec![(1, Some((amount * 2 / 3).into())), (0, Some((amount / 4).into()))],
+        &vec![
+            (1, Some((amount * 2 / 3).into())),
+            (0, Some((amount / 4).into())),
+        ],
     );
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("too big claim_amount for lockup"));
@@ -472,7 +467,7 @@ fn test_claim_specific_lockups_overflow() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -484,11 +479,10 @@ fn test_claim_specific_lockups_overflow() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
 
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
 
     // Set time to half unlock

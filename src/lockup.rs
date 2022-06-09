@@ -14,10 +14,7 @@ pub struct LockupClaim {
 
 #[derive(BorshDeserialize, BorshSerialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(
-    not(target_arch = "wasm32"),
-    derive(Debug, PartialEq, Clone, Serialize)
-)]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct Lockup {
     pub account_id: ValidAccountId,
     pub schedule: Schedule,
@@ -68,17 +65,55 @@ impl Lockup {
 
         if let Some(termination_config) = &self.termination_config {
             match &termination_config.vesting_schedule {
-                None => {
+                VestingConditions::SameAsLockupSchedule => {
                     // Ok, using lockup schedule.
                 }
-                Some(HashOrSchedule::Hash(_hash)) => {
+                VestingConditions::Hash(_hash) => {
                     // Ok, using unknown hash. Can't verify.
                 }
-                Some(HashOrSchedule::Schedule(schedule)) => {
+                VestingConditions::Schedule(schedule) => {
                     schedule.assert_valid(total_balance);
                     self.schedule.assert_valid_termination_schedule(&schedule);
                 }
             }
+        }
+    }
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
+pub struct LockupCreate {
+    pub account_id: ValidAccountId,
+    pub schedule: Schedule,
+    pub vesting_schedule: Option<VestingConditions>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl LockupCreate {
+    pub fn new_unlocked(account_id: ValidAccountId, total_balance: Balance) -> Self {
+        Self {
+            account_id,
+            schedule: Schedule::new_unlocked(total_balance),
+            vesting_schedule: None,
+        }
+    }
+}
+
+impl LockupCreate {
+    pub fn into_lockup(&self, payer_id: &ValidAccountId) -> Lockup {
+        let vesting_schedule = self.vesting_schedule.clone();
+        Lockup {
+            account_id: self.account_id.clone(),
+            schedule: self.schedule.clone(),
+            claimed_balance: 0,
+            termination_config: match vesting_schedule {
+                None => None,
+                Some(vesting_schedule) => Some(TerminationConfig {
+                    beneficiary_id: payer_id.clone(),
+                    vesting_schedule,
+                }),
+            },
         }
     }
 }

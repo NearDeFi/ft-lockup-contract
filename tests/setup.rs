@@ -5,14 +5,16 @@ pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance}
 use near_sdk::serde_json::json;
 use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
-use near_sdk_sim::{
+pub use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 
-pub use ft_lockup::lockup::{Lockup, LockupIndex};
+pub use ft_lockup::draft::{Draft, DraftGroupIndex, DraftIndex};
+use ft_lockup::ft_token_receiver::DraftGroupFunding;
+pub use ft_lockup::lockup::{Lockup, LockupCreate, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
-pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
-use ft_lockup::view::LockupView;
+pub use ft_lockup::termination::{TerminationConfig, VestingConditions};
+use ft_lockup::view::{DraftGroupView, DraftView, LockupView};
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
@@ -214,6 +216,26 @@ impl Env {
         }
     }
 
+    pub fn ft_transfer(
+        &self,
+        sender: &UserAccount,
+        amount: Balance,
+        receiver: &UserAccount,
+    ) -> ExecutionResult {
+        sender.call(
+            self.token.account_id.clone(),
+            "ft_transfer",
+            &json!({
+                "receiver_id": receiver.valid_account_id(),
+                "amount": WrappedBalance::from(amount),
+            })
+            .to_string()
+            .into_bytes(),
+            MAX_GAS,
+            1,
+        )
+    }
+
     pub fn ft_transfer_call(
         &self,
         user: &UserAccount,
@@ -239,9 +261,19 @@ impl Env {
         &self,
         user: &UserAccount,
         amount: Balance,
-        lockup: &Lockup,
+        lockup_create: &LockupCreate,
     ) -> ExecutionResult {
-        self.ft_transfer_call(user, amount, &serde_json::to_string(lockup).unwrap())
+        self.ft_transfer_call(user, amount, &serde_json::to_string(lockup_create).unwrap())
+    }
+
+    pub fn fund_draft_group(
+        &self,
+        user: &UserAccount,
+        amount: Balance,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        let funding = DraftGroupFunding { draft_group_id };
+        self.ft_transfer_call(user, amount, &serde_json::to_string(&funding).unwrap())
     }
 
     pub fn claim(&self, user: &UserAccount) -> ExecutionResult {
@@ -326,6 +358,46 @@ impl Env {
         )
     }
 
+    pub fn create_draft_group(&self, user: &UserAccount) -> ExecutionResult {
+        user.function_call(self.contract.contract.create_draft_group(), DEFAULT_GAS, 0)
+    }
+
+    pub fn create_draft(&self, user: &UserAccount, draft: &Draft) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.create_draft(draft.clone()),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn create_drafts(&self, user: &UserAccount, drafts: &Vec<Draft>) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.create_drafts(drafts.clone()),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn convert_draft(&self, user: &UserAccount, draft_id: DraftIndex) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.convert_draft(draft_id),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn convert_drafts(
+        &self,
+        user: &UserAccount,
+        draft_ids: &Vec<DraftIndex>,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.convert_drafts(draft_ids.clone()),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
     pub fn get_num_lockups(&self) -> u32 {
         self.near
             .view_method_call(self.contract.contract.get_num_lockups())
@@ -377,6 +449,56 @@ impl Env {
     pub fn get_token_account_id(&self) -> ValidAccountId {
         self.near
             .view_method_call(self.contract.contract.get_token_account_id())
+            .unwrap_json()
+    }
+
+    pub fn get_next_draft_group_id(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_next_draft_group_id())
+            .unwrap_json()
+    }
+
+    pub fn get_next_draft_id(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_next_draft_id())
+            .unwrap_json()
+    }
+
+    pub fn get_num_draft_groups(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_num_draft_groups())
+            .unwrap_json()
+    }
+
+    pub fn get_draft_group(&self, index: DraftGroupIndex) -> Option<DraftGroupView> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft_group(index))
+            .unwrap_json()
+    }
+
+    pub fn get_draft_groups_paged(
+        &self,
+        from_index: Option<DraftGroupIndex>,
+        to_index: Option<DraftGroupIndex>,
+    ) -> Vec<(DraftGroupIndex, DraftGroupView)> {
+        self.near
+            .view_method_call(
+                self.contract
+                    .contract
+                    .get_draft_groups_paged(from_index, to_index),
+            )
+            .unwrap_json()
+    }
+
+    pub fn get_draft(&self, index: DraftIndex) -> Option<DraftView> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft(index))
+            .unwrap_json()
+    }
+
+    pub fn get_drafts(&self, indices: Vec<DraftIndex>) -> Vec<(DraftIndex, DraftView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_drafts(indices))
             .unwrap_json()
     }
 

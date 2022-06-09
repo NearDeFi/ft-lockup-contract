@@ -16,7 +16,7 @@ fn test_deposit_whitelist_get() {
     assert_eq!(deposit_whitelist, vec![e.owner.account_id.clone()]);
 
     // user from whitelist can create lockups
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: Schedule(vec![
             Checkpoint {
@@ -28,10 +28,9 @@ fn test_deposit_whitelist_get() {
                 balance: amount,
             },
         ]),
-        claimed_balance: 0,
-        termination_config: None,
+        vesting_schedule: None,
     };
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup_create).unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -64,7 +63,7 @@ fn test_deposit_whitelist_get() {
     assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // user not in whitelist cannot create lockups
-    let res = e.add_lockup(&e.owner, amount, &lockup);
+    let res = e.add_lockup(&e.owner, amount, &lockup_create);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, 0);
     assert!(res.logs()[0].contains("Refund"));

@@ -11,18 +11,21 @@ fn test_lockup_terminate_with_timestamp_in_future() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
+    assert!(res.is_ok());
+    ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
+    e.ft_transfer(&e.owner, amount, &users.eve);
+
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
-    let lockup = Lockup {
+    let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
         schedule: lockup_schedule,
-        claimed_balance: 0,
-        termination_config: Some(TerminationConfig {
-            terminator_id: users.eve.valid_account_id(),
-            vesting_schedule: Some(HashOrSchedule::Schedule(vesting_schedule)),
-        }),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
-    let balance: WrappedBalance = e.add_lockup(&e.owner, amount, &lockup).unwrap_json();
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
     assert_eq!(balance.0, amount);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups.len(), 1);
@@ -30,8 +33,6 @@ fn test_lockup_terminate_with_timestamp_in_future() {
 
     // before_cliff, 0 vested
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1);
-
-    ft_storage_deposit(&users.eve, TOKEN_ID, &users.eve.account_id);
 
     // try TERMINATE with past timestamp
     let res = e.terminate_with_timestamp(
