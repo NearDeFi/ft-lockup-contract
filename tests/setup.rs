@@ -398,6 +398,26 @@ impl Env {
         )
     }
 
+    pub fn discard_draft_group(
+        &self,
+        user: &UserAccount,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.discard_draft_group(draft_group_id),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn delete_drafts(&self, user: &UserAccount, draft_ids: Vec<DraftIndex>) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.delete_drafts(draft_ids),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
     pub fn get_num_lockups(&self) -> u32 {
         self.near
             .view_method_call(self.contract.contract.get_num_lockups())

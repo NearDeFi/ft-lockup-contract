@@ -490,3 +490,140 @@ fn test_draft_payer_update() {
     let balance = e.ft_balance_of(&users.dude);
     assert_eq!(balance, amount);
 }
+
+#[test]
+fn test_delete_draft_group_before_add_drafts() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let res = e.create_draft_group(&e.owner);
+    assert!(res.is_ok());
+    let draft_group_id: DraftGroupIndex = res.unwrap_json();
+    assert_eq!(draft_group_id, 0);
+
+    // anonymous cannot discard draft group
+    let res = e.discard_draft_group(&users.eve, draft_group_id);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
+
+    // admin can discard empty draft group
+    let res = e.discard_draft_group(&e.owner, draft_group_id);
+    assert!(res.is_ok());
+    let res = e.get_draft_group(draft_group_id);
+    assert!(
+        res.is_none(),
+        "expected discarded draft group to be removed"
+    );
+}
+
+#[test]
+fn test_delete_draft_group_before_fund() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let res = e.create_draft_group(&e.owner);
+    assert!(res.is_ok());
+    let draft_group_id: DraftGroupIndex = res.unwrap_json();
+    assert_eq!(draft_group_id, 0);
+
+    let res = e.get_draft_group(draft_group_id);
+    assert!(res.is_some());
+    let res = res.unwrap();
+    assert!(!res.discarded, "expected draft group not to be discarded");
+
+    let amount = d(60000, TOKEN_DECIMALS);
+    let draft = Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
+    };
+
+    // create draft 0
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(res.is_ok());
+    let draft_id: DraftIndex = res.unwrap_json();
+    assert_eq!(draft_id, 0);
+
+    // admin can discard non-empty draft group
+    let res = e.discard_draft_group(&e.owner, draft_group_id);
+    assert!(res.is_ok());
+
+    let res = e.get_draft_group(draft_group_id);
+    assert!(res.is_some());
+    let res = res.unwrap();
+    assert!(res.discarded, "expected draft group to be discarded");
+
+    // draft group is not removed immediately
+    let res = e.get_draft_group(draft_group_id);
+    assert!(
+        res.is_some(),
+        "expected discarded draft group to be removed"
+    );
+
+    // admin cannot add drafts to the group
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("draft group is discarded"));
+
+    // admin cannot fund the group
+    let res = e.fund_draft_group(&e.owner, amount, draft_group_id);
+    assert!(res.logs()[0].contains("Refund"));
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, 0);
+
+    // cannot convert draft after discard
+    let res = e.convert_draft(&users.bob, 0);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("draft group is discarded"));
+
+    // anyone can delete draft after the group is discarded
+    let res = e.delete_drafts(&users.eve, vec![draft_id]);
+    assert!(res.is_ok());
+    // last draft is removed
+    let res = e.get_draft(draft_id);
+    assert!(
+        res.is_none(),
+        "expected discarded draft group to be removed"
+    );
+    // draft group is removed with last draft
+    let res = e.get_draft_group(draft_group_id);
+    assert!(
+        res.is_none(),
+        "expected discarded draft group to be removed"
+    );
+}
+
+#[test]
+fn test_delete_draft_group_after_fund() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let res = e.create_draft_group(&e.owner);
+    assert!(res.is_ok());
+    let draft_group_id: DraftGroupIndex = res.unwrap_json();
+    assert_eq!(draft_group_id, 0);
+
+    let amount = d(60000, TOKEN_DECIMALS);
+    let draft = Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
+    };
+
+    // create draft 0
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(res.is_ok());
+    let res: DraftIndex = res.unwrap_json();
+    assert_eq!(res, 0);
+
+    // fund the group
+    let res = e.fund_draft_group(&e.owner, amount, draft_group_id);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+
+    // admin cannot discard non-empty draft group after it's converted
+    let res = e.discard_draft_group(&e.owner, draft_group_id);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("draft group already funded"));
+}

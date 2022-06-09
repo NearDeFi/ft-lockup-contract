@@ -30,6 +30,7 @@ pub struct DraftGroup {
     pub total_amount: Balance,
     pub payer_id: Option<ValidAccountId>,
     pub draft_indices: HashSet<DraftIndex>,
+    pub discarded: bool,
 }
 
 impl DraftGroup {
@@ -38,10 +39,15 @@ impl DraftGroup {
             total_amount: 0,
             payer_id: None,
             draft_indices: HashSet::new(),
+            discarded: false,
         }
     }
 
     pub fn assert_can_add_draft(&self) {
+        assert!(
+            !self.discarded,
+            "cannot add draft, draft group is discarded"
+        );
         assert!(
             self.payer_id.is_none(),
             "cannot add draft, group already funded"
@@ -50,13 +56,52 @@ impl DraftGroup {
 
     pub fn assert_can_convert_draft(&self) {
         assert!(
+            !self.discarded,
+            "cannot convert draft, draft group is discarded"
+        );
+        assert!(
             self.payer_id.is_some(),
             "cannot convert draft from not funded group"
         );
     }
 
-    pub fn fund(&mut self, payer_id: &ValidAccountId) {
+    pub fn assert_can_fund(&self) {
+        assert!(
+            !self.discarded,
+            "cannot fund draft, draft group is discarded"
+        );
         assert!(self.payer_id.is_none(), "draft group already funded");
+    }
+
+    pub fn fund(&mut self, payer_id: &ValidAccountId) {
+        self.assert_can_fund();
         self.payer_id = Some(payer_id.clone());
+    }
+
+    pub fn assert_can_discard(&mut self) {
+        assert!(
+            !self.discarded,
+            "cannot discard, draft group already discarded"
+        );
+        assert!(
+            self.payer_id.is_none(),
+            "cannot discard, draft group already funded"
+        );
+    }
+
+    pub fn discard(&mut self) {
+        self.assert_can_discard();
+        self.discarded = true;
+    }
+
+    pub fn assert_can_delete_draft(&mut self) {
+        assert!(
+            self.discarded,
+            "cannot delete draft, draft group is not discarded"
+        );
+        assert!(
+            self.payer_id.is_none(),
+            "cannot delete draft, draft group already funded"
+        );
     }
 }
