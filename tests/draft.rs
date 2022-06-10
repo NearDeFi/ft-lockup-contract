@@ -542,24 +542,28 @@ fn test_delete_draft_group_before_fund() {
     // create draft 0
     let res = e.create_draft(&e.owner, &draft);
     assert!(res.is_ok());
-    let draft_id: DraftIndex = res.unwrap_json();
-    assert_eq!(draft_id, 0);
+    let draft_id_0: DraftIndex = res.unwrap_json();
+    assert_eq!(draft_id_0, 0);
+
+    // create draft 1
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(res.is_ok());
+    let draft_id_1: DraftIndex = res.unwrap_json();
+    assert_eq!(draft_id_1, 1);
+
+    let res = e.get_draft_group(draft_group_id).unwrap();
+    assert_eq!(res.total_amount, amount * 2);
 
     // admin can discard non-empty draft group
     let res = e.discard_draft_group(&e.owner, draft_group_id);
     assert!(res.is_ok());
 
+    // draft group is not removed immediately
     let res = e.get_draft_group(draft_group_id);
     assert!(res.is_some());
     let res = res.unwrap();
     assert!(res.discarded, "expected draft group to be discarded");
-
-    // draft group is not removed immediately
-    let res = e.get_draft_group(draft_group_id);
-    assert!(
-        res.is_some(),
-        "expected discarded draft group to be removed"
-    );
+    assert_eq!(res.total_amount, amount * 2);
 
     // admin cannot add drafts to the group
     let res = e.create_draft(&e.owner, &draft);
@@ -578,13 +582,25 @@ fn test_delete_draft_group_before_fund() {
     assert!(format!("{:?}", res.status()).contains("draft group is discarded"));
 
     // anyone can delete draft after the group is discarded
-    let res = e.delete_drafts(&users.eve, vec![draft_id]);
+    let res = e.delete_drafts(&users.eve, vec![draft_id_0]);
     assert!(res.is_ok());
-    // last draft is removed
-    let res = e.get_draft(draft_id);
+    // first draft is removed
+    let res = e.get_draft(draft_id_0);
     assert!(
         res.is_none(),
-        "expected discarded draft group to be removed"
+        "expected draft to be removed"
+    );
+    let res = e.get_draft_group(draft_group_id).unwrap();
+    assert_eq!(res.total_amount, amount, "expected total amount to decrease after draft delete");
+
+    // deleting last draft
+    let res = e.delete_drafts(&users.eve, vec![draft_id_1]);
+    assert!(res.is_ok());
+    // last draft is removed
+    let res = e.get_draft(draft_id_1);
+    assert!(
+        res.is_none(),
+        "expected draft to be removed"
     );
     // draft group is removed with last draft
     let res = e.get_draft_group(draft_group_id);

@@ -411,6 +411,10 @@ impl Contract {
                 });
 
             draft_group.assert_can_delete_draft();
+            let amount = draft.total_balance();
+            assert!(draft_group.total_amount >= amount, "Invariant");
+            draft_group.total_amount -= amount;
+
             assert!(draft_group.draft_indices.remove(draft_id), "Invariant");
         });
 
