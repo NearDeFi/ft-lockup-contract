@@ -400,7 +400,7 @@ impl Contract {
 
     pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
-        draft_ids.iter().for_each(|draft_id| {
+        for draft_id in &draft_ids {
             let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
             let draft_group = draft_group_lookup
                 .entry(draft.draft_group_id)
@@ -416,16 +416,14 @@ impl Contract {
             draft_group.total_amount -= amount;
 
             assert!(draft_group.draft_indices.remove(draft_id), "Invariant");
-        });
+        }
 
-        draft_group_lookup
-            .iter()
-            .for_each(|(draft_group_id, draft_group)| {
-                if draft_group.draft_indices.is_empty() {
-                    self.draft_groups.remove(&draft_group_id as _);
-                } else {
-                    self.draft_groups.insert(&draft_group_id as _, &draft_group);
-                }
-            });
+        for (draft_group_id, draft_group) in &draft_group_lookup {
+            if draft_group.draft_indices.is_empty() {
+                self.draft_groups.remove(&draft_group_id as _);
+            } else {
+                self.draft_groups.insert(&draft_group_id as _, &draft_group);
+            }
+        }
     }
 }
