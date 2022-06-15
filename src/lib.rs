@@ -399,6 +399,7 @@ impl Contract {
     }
 
     pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
+        // no authorization required here since the draft group discard has been authorized
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
         for draft_id in &draft_ids {
             let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
