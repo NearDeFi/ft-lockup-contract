@@ -40,6 +40,10 @@ impl Schedule {
             assert!(self.0[i - 1].timestamp < self.0[i].timestamp, "The timestamp of checkpoint #{} should be less than the timestamp of the next checkpoint", i - 1);
             assert!(self.0[i - 1].balance <= self.0[i].balance, "The balance of checkpoint #{} should be not greater than the balance of the next checkpoint", i - 1);
         }
+        assert!(
+            self.total_balance() > 0,
+            "expected total balance to be positive",
+        );
         assert_eq!(
             self.total_balance(),
             total_balance,
