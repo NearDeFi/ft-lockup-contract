@@ -381,4 +381,50 @@ impl Contract {
 
         lockup_ids
     }
+
+    pub fn discard_draft_group(&mut self, draft_group_id: DraftGroupIndex) {
+        self.assert_deposit_whitelist(&env::predecessor_account_id());
+
+        let mut draft_group = self
+            .draft_groups
+            .get(&draft_group_id as _)
+            .expect("draft group not found");
+        draft_group.discard();
+
+        if draft_group.draft_indices.is_empty() {
+            self.draft_groups.remove(&draft_group_id as _);
+        } else {
+            self.draft_groups.insert(&draft_group_id as _, &draft_group);
+        }
+    }
+
+    pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
+        // no authorization required here since the draft group discard has been authorized
+        let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        for draft_id in &draft_ids {
+            let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
+            let draft_group = draft_group_lookup
+                .entry(draft.draft_group_id)
+                .or_insert_with(|| {
+                    self.draft_groups
+                        .get(&draft.draft_group_id as _)
+                        .expect("draft group not found")
+                });
+
+            draft_group.assert_can_delete_draft();
+            let amount = draft.total_balance();
+            assert!(draft_group.total_amount >= amount, "Invariant");
+            draft_group.total_amount -= amount;
+
+            assert!(draft_group.draft_indices.remove(draft_id), "Invariant");
+        }
+
+        for (draft_group_id, draft_group) in &draft_group_lookup {
+            if draft_group.draft_indices.is_empty() {
+                self.draft_groups.remove(&draft_group_id as _);
+            } else {
+                self.draft_groups.insert(&draft_group_id as _, &draft_group);
+            }
+        }
+    }
 }

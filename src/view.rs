@@ -94,6 +94,7 @@ pub struct DraftGroupView {
     pub total_amount: Balance,
     pub payer_id: Option<ValidAccountId>,
     pub draft_indices: Vec<DraftIndex>,
+    pub discarded: bool,
     pub funded: bool,
 }
 
@@ -103,6 +104,7 @@ impl From<DraftGroup> for DraftGroupView {
             total_amount: draft_group.total_amount,
             payer_id: draft_group.payer_id.clone(),
             draft_indices: draft_group.draft_indices.into_iter().collect(),
+            discarded: draft_group.discarded,
             funded: draft_group.payer_id.is_some(),
         }
     }
