@@ -10,7 +10,7 @@ fn test_create_draft_group() {
 
     // create by not authorized account
     let res = e.create_draft_group(&users.alice);
-    assert!(!res.is_ok(), "only deposit whitelist can create group");
+    assert!(!res.is_ok(), "only operator whitelist can create group");
 
     let res = e.create_draft_group(&e.owner);
     assert!(res.is_ok());
@@ -79,7 +79,7 @@ fn test_create_draft() {
 
     let res = e.create_draft(&users.alice, &draft);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
 
     // create draft 0
     let res = e.create_draft(&e.owner, &draft);
@@ -445,11 +445,11 @@ fn test_draft_payer_update() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let amount = d(60000, TOKEN_DECIMALS);
 
-    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
 
-    let res = e.add_to_deposit_whitelist(&e.owner, &users.dude.valid_account_id());
+    let res = e.add_to_operators_whitelist(&e.owner, &users.dude.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     e.ft_transfer(&e.owner, amount, &users.dude);
@@ -526,7 +526,7 @@ fn test_delete_draft_group_before_add_drafts() {
     // anonymous cannot discard draft group
     let res = e.discard_draft_group(&users.eve, draft_group_id);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
 
     // admin can discard empty draft group
     let res = e.discard_draft_group(&e.owner, draft_group_id);
@@ -607,22 +607,19 @@ fn test_delete_draft_group_before_fund() {
     assert!(res.is_ok());
     // first draft is removed
     let res = e.get_draft(draft_id_0);
-    assert!(
-        res.is_none(),
-        "expected draft to be removed"
-    );
+    assert!(res.is_none(), "expected draft to be removed");
     let res = e.get_draft_group(draft_group_id).unwrap();
-    assert_eq!(res.total_amount, amount, "expected total amount to decrease after draft delete");
+    assert_eq!(
+        res.total_amount, amount,
+        "expected total amount to decrease after draft delete"
+    );
 
     // deleting last draft
     let res = e.delete_drafts(&users.eve, vec![draft_id_1]);
     assert!(res.is_ok());
     // last draft is removed
     let res = e.get_draft(draft_id_1);
-    assert!(
-        res.is_none(),
-        "expected draft to be removed"
-    );
+    assert!(res.is_none(), "expected draft to be removed");
     // draft group is removed with last draft
     let res = e.get_draft_group(draft_group_id);
     assert!(

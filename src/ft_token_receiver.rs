@@ -28,7 +28,7 @@ impl FungibleTokenReceiver for Contract {
             "Invalid token ID"
         );
         let amount = amount.into();
-        self.assert_deposit_whitelist(sender_id.as_ref());
+        self.assert_operators_whitelist(sender_id.as_ref());
 
         let ft_message: FtMessage = serde_json::from_str(&msg).unwrap();
         match ft_message {

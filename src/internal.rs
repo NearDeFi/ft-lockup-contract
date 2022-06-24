@@ -1,10 +1,10 @@
 use crate::*;
 
 impl Contract {
-    pub(crate) fn assert_deposit_whitelist(&self, account_id: &AccountId) {
+    pub(crate) fn assert_operators_whitelist(&self, account_id: &AccountId) {
         assert!(
-            self.deposit_whitelist.contains(account_id),
-            "Not in deposit whitelist"
+            self.operators_whitelist.contains(account_id),
+            "Not in operators whitelist"
         );
     }
 

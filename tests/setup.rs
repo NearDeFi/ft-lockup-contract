@@ -162,7 +162,7 @@ pub fn to_nano(timestamp: u32) -> Timestamp {
 }
 
 impl Env {
-    pub fn init(deposit_whitelist: Option<Vec<ValidAccountId>>) -> Self {
+    pub fn init(operators_whitelist: Option<Vec<ValidAccountId>>) -> Self {
         let mut genesis_config = GenesisConfig::default();
         genesis_config.block_prod_time = 0;
         let root = init_simulator(Some(genesis_config));
@@ -201,7 +201,7 @@ impl Env {
             gas: DEFAULT_GAS,
             init_method: new(
                 token.valid_account_id(),
-                deposit_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()])
+                operators_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()])
             )
         );
 
@@ -330,7 +330,7 @@ impl Env {
         )
     }
 
-    pub fn remove_from_deposit_whitelist(
+    pub fn remove_from_operators_whitelist(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
@@ -338,13 +338,13 @@ impl Env {
         user.function_call(
             self.contract
                 .contract
-                .remove_from_deposit_whitelist(account_id.clone()),
+                .remove_from_operators_whitelist(account_id.clone()),
             DEFAULT_GAS,
             1,
         )
     }
 
-    pub fn add_to_deposit_whitelist(
+    pub fn add_to_operators_whitelist(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
@@ -352,7 +352,7 @@ impl Env {
         user.function_call(
             self.contract
                 .contract
-                .add_to_deposit_whitelist(account_id.clone()),
+                .add_to_operators_whitelist(account_id.clone()),
             DEFAULT_GAS,
             1,
         )
@@ -440,9 +440,9 @@ impl Env {
             .unwrap_json()
     }
 
-    pub fn get_deposit_whitelist(&self) -> Vec<AccountId> {
+    pub fn get_operators_whitelist(&self) -> Vec<AccountId> {
         self.near
-            .view_method_call(self.contract.contract.get_deposit_whitelist())
+            .view_method_call(self.contract.contract.get_operators_whitelist())
             .unwrap_json()
     }
 
