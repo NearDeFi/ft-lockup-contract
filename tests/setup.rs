@@ -201,7 +201,8 @@ impl Env {
             gas: DEFAULT_GAS,
             init_method: new(
                 token.valid_account_id(),
-                operators_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()])
+                operators_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()]),
+                None
             )
         );
 

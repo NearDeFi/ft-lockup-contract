@@ -74,6 +74,10 @@ pub struct Contract {
     /// - create lockups, terminate lockups, fund draft_groups
     pub operators_whitelist: UnorderedSet<AccountId>,
 
+    /// account ids that can perform all actions on drafts:
+    /// - manage drafts, draft_groups
+    pub draft_operators_whitelist: UnorderedSet<AccountId>,
+
     pub next_draft_id: DraftIndex,
     pub drafts: LookupMap<DraftIndex, Draft>,
     pub next_draft_group_id: DraftGroupIndex,
@@ -85,6 +89,7 @@ pub(crate) enum StorageKey {
     Lockups,
     AccountLockups,
     OperatorsWhitelist,
+    DraftOperatorsWhitelist,
     Drafts,
     DraftGroups,
 }
@@ -92,14 +97,27 @@ pub(crate) enum StorageKey {
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new(token_account_id: ValidAccountId, operators_whitelist: Vec<ValidAccountId>) -> Self {
+    pub fn new(
+        token_account_id: ValidAccountId,
+        operators_whitelist: Vec<ValidAccountId>,
+        draft_operators_whitelist: Option<Vec<ValidAccountId>>,
+    ) -> Self {
         let mut operators_whitelist_set = UnorderedSet::new(StorageKey::OperatorsWhitelist);
         operators_whitelist_set.extend(operators_whitelist.into_iter().map(|a| a.into()));
+        let mut draft_operators_whitelist_set =
+            UnorderedSet::new(StorageKey::DraftOperatorsWhitelist);
+        draft_operators_whitelist_set.extend(
+            draft_operators_whitelist
+                .unwrap_or(vec![])
+                .into_iter()
+                .map(|a| a.into()),
+        );
         Self {
             lockups: Vector::new(StorageKey::Lockups),
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
             token_account_id: token_account_id.into(),
             operators_whitelist: operators_whitelist_set,
+            draft_operators_whitelist: draft_operators_whitelist_set,
             next_draft_id: 0,
             drafts: LookupMap::new(StorageKey::Drafts),
             next_draft_group_id: 0,
