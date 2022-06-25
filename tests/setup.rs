@@ -31,6 +31,7 @@ pub const NEAR: &str = "near";
 pub const TOKEN_ID: &str = "token.near";
 pub const FT_LOCKUP_ID: &str = "ft-lockup.near";
 pub const OWNER_ID: &str = "owner.near";
+pub const DRAFT_OPERATOR_ID: &str = "draft_operator.near";
 
 pub const T_GAS: Gas = 10u64.pow(12);
 pub const DEFAULT_GAS: Gas = 15 * T_GAS;
@@ -45,6 +46,7 @@ pub struct Env {
     pub root: UserAccount,
     pub near: UserAccount,
     pub owner: UserAccount,
+    pub draft_operator: UserAccount,
     pub contract: ContractAccount<FtLockupContract>,
     pub token: UserAccount,
 }
@@ -168,6 +170,7 @@ impl Env {
         let root = init_simulator(Some(genesis_config));
         let near = root.create_user(NEAR.to_string(), to_yocto("1000000"));
         let owner = near.create_user(OWNER_ID.to_string(), to_yocto("10000"));
+        let draft_operator = near.create_user(DRAFT_OPERATOR_ID.to_string(), to_yocto("10000"));
 
         let token = near.deploy_and_init(
             &FUNGIBLE_TOKEN_WASM_BYTES,
@@ -212,6 +215,7 @@ impl Env {
             root,
             near,
             owner,
+            draft_operator,
             contract,
             token,
         }
