@@ -8,6 +8,14 @@ impl Contract {
         );
     }
 
+    pub(crate) fn assert_draft_operators_whitelist(&self, account_id: &AccountId) {
+        assert!(
+            (self.operators_whitelist.contains(account_id)
+                || self.draft_operators_whitelist.contains(account_id)),
+            "Not in draft operators whitelist"
+        );
+    }
+
     pub(crate) fn internal_add_lockup(&mut self, lockup: &Lockup) -> LockupIndex {
         let index = self.lockups.len() as LockupIndex;
         self.lockups.push(lockup);

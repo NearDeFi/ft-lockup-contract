@@ -10,14 +10,16 @@ fn test_create_draft_group() {
 
     // create by not authorized account
     let res = e.create_draft_group(&users.alice);
-    assert!(!res.is_ok(), "only operator whitelist can create group");
+    assert!(!res.is_ok(), "only draft_operator can create group");
 
+    // owner can create draft group
     let res = e.create_draft_group(&e.owner);
     assert!(res.is_ok());
     let index: DraftGroupIndex = res.unwrap_json();
     assert_eq!(index, 0);
 
-    let res = e.create_draft_group(&e.owner);
+    // non-owner draft_operator can create draft group
+    let res = e.create_draft_group(&e.draft_operator);
     assert!(res.is_ok());
     let index: DraftGroupIndex = res.unwrap_json();
     assert_eq!(index, 1);
@@ -28,9 +30,9 @@ fn test_view_draft_groups() {
     let e = Env::init(None);
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
-    e.create_draft_group(&e.owner);
-    e.create_draft_group(&e.owner);
-    e.create_draft_group(&e.owner);
+    e.create_draft_group(&e.draft_operator);
+    e.create_draft_group(&e.draft_operator);
+    e.create_draft_group(&e.draft_operator);
 
     let result = e.get_draft_group(2);
     assert!(result.is_some());
@@ -71,7 +73,7 @@ fn test_create_draft() {
         lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("draft group not found"));
 
@@ -79,15 +81,15 @@ fn test_create_draft() {
 
     let res = e.create_draft(&users.alice, &draft);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in draft operators whitelist"));
 
-    // create draft 0
-    let res = e.create_draft(&e.owner, &draft);
+    // create draft 0 by draft_operator
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(res.is_ok());
     let res: DraftGroupIndex = res.unwrap_json();
     assert_eq!(res, 0);
 
-    // create draft 1
+    // create draft 1 by owner
     let res = e.create_draft(&e.owner, &draft);
     assert!(res.is_ok());
     let res: DraftGroupIndex = res.unwrap_json();
@@ -140,9 +142,9 @@ fn test_create_drafts_batch() {
         })
         .collect();
 
-    e.create_draft_group(&e.owner);
+    e.create_draft_group(&e.draft_operator);
 
-    let res = e.create_drafts(&e.owner, &drafts);
+    let res = e.create_drafts(&e.draft_operator, &drafts);
     assert!(res.is_ok());
     let ids: Vec<DraftIndex> = res.unwrap_json();
     assert_eq!(ids, vec![0, 1]);
@@ -176,13 +178,13 @@ fn test_fund_draft_group() {
         lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
-    e.create_draft_group(&e.owner);
+    e.create_draft_group(&e.draft_operator);
 
     // create draft 0
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(res.is_ok());
     // create draft 1
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(res.is_ok());
 
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.alice.account_id);
@@ -200,7 +202,7 @@ fn test_fund_draft_group() {
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, 0);
 
-    // fund draft group
+    // fund draft group by owner should succeed
     let res = e.fund_draft_group(&e.owner, amount * 2, 0);
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount * 2);
@@ -215,7 +217,7 @@ fn test_fund_draft_group() {
     assert_eq!(balance.0, 0);
 
     // add draft after funding
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("group already funded"));
 }
@@ -235,20 +237,20 @@ fn test_convert_draft() {
 
     assert_eq!(e.get_next_draft_group_id(), 0);
     assert_eq!(e.get_num_draft_groups(), 0);
-    e.create_draft_group(&e.owner);
+    e.create_draft_group(&e.draft_operator);
     assert_eq!(e.get_next_draft_group_id(), 1);
     assert_eq!(e.get_num_draft_groups(), 1);
-    e.create_draft_group(&e.owner);
+    e.create_draft_group(&e.draft_operator);
     assert_eq!(e.get_next_draft_group_id(), 2);
     assert_eq!(e.get_num_draft_groups(), 2);
 
     assert_eq!(e.get_next_draft_id(), 0);
     // create draft 0
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert_eq!(e.get_next_draft_id(), 1);
     assert!(res.is_ok());
     // create draft 1
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert_eq!(e.get_next_draft_id(), 2);
     assert!(res.is_ok());
 
@@ -334,11 +336,11 @@ fn test_convert_drafts_batch() {
         lockup_create: LockupCreate::new_unlocked(user.valid_account_id(), amount),
     };
 
-    let group_0: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
-    let group_1: DraftGroupIndex = e.create_draft_group(&e.owner).unwrap_json();
+    let group_0: DraftGroupIndex = e.create_draft_group(&e.draft_operator).unwrap_json();
+    let group_1: DraftGroupIndex = e.create_draft_group(&e.draft_operator).unwrap_json();
 
     let res = e.create_drafts(
-        &e.owner,
+        &e.draft_operator,
         &vec![
             build_draft(group_0, &users.alice),
             build_draft(group_0, &users.bob),
@@ -358,7 +360,6 @@ fn test_convert_drafts_batch() {
 
     // convert by anonymous
     let res = e.convert_drafts(&users.eve, &vec![3, 0, 2, 1]);
-    println!("{:#?}", res);
     assert!(res.is_ok());
     let mut res: Vec<LockupIndex> = res.unwrap_json();
     res.sort();
@@ -388,10 +389,10 @@ fn test_view_drafts() {
         lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
-    e.create_draft_group(&e.owner);
-    e.create_draft(&e.owner, &draft);
-    e.create_draft(&e.owner, &draft);
-    e.create_draft(&e.owner, &draft);
+    assert!(e.create_draft_group(&e.draft_operator).is_ok());
+    assert!(e.create_draft(&e.draft_operator, &draft).is_ok());
+    assert!(e.create_draft(&e.draft_operator, &draft).is_ok());
+    assert!(e.create_draft(&e.draft_operator, &draft).is_ok());
 
     // fund draft group
     let res = e.fund_draft_group(&e.owner, amount * 3, 0);
@@ -421,8 +422,8 @@ fn test_create_via_draft_batches_and_claim() {
         lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
     };
 
-    e.create_draft_group(&e.owner);
-    e.create_drafts(&e.owner, &vec![draft]);
+    e.create_draft_group(&e.draft_operator);
+    e.create_drafts(&e.draft_operator, &vec![draft]);
 
     // fund draft group
     let res = e.fund_draft_group(&e.owner, amount, 0);
@@ -454,7 +455,7 @@ fn test_draft_payer_update() {
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     e.ft_transfer(&e.owner, amount, &users.dude);
 
-    let res = e.create_draft_group(&e.owner);
+    let res = e.create_draft_group(&e.draft_operator);
     assert!(res.is_ok());
     let draft_group_id = 0;
 
@@ -518,7 +519,7 @@ fn test_delete_draft_group_before_add_drafts() {
     let users = Users::init(&e);
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
-    let res = e.create_draft_group(&e.owner);
+    let res = e.create_draft_group(&e.draft_operator);
     assert!(res.is_ok());
     let draft_group_id: DraftGroupIndex = res.unwrap_json();
     assert_eq!(draft_group_id, 0);
@@ -526,10 +527,10 @@ fn test_delete_draft_group_before_add_drafts() {
     // anonymous cannot discard draft group
     let res = e.discard_draft_group(&users.eve, draft_group_id);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in draft operators whitelist"));
 
     // admin can discard empty draft group
-    let res = e.discard_draft_group(&e.owner, draft_group_id);
+    let res = e.discard_draft_group(&e.draft_operator, draft_group_id);
     assert!(res.is_ok());
     let res = e.get_draft_group(draft_group_id);
     assert!(
@@ -544,7 +545,7 @@ fn test_delete_draft_group_before_fund() {
     let users = Users::init(&e);
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
-    let res = e.create_draft_group(&e.owner);
+    let res = e.create_draft_group(&e.draft_operator);
     assert!(res.is_ok());
     let draft_group_id: DraftGroupIndex = res.unwrap_json();
     assert_eq!(draft_group_id, 0);
@@ -561,13 +562,13 @@ fn test_delete_draft_group_before_fund() {
     };
 
     // create draft 0
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(res.is_ok());
     let draft_id_0: DraftIndex = res.unwrap_json();
     assert_eq!(draft_id_0, 0);
 
     // create draft 1
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(res.is_ok());
     let draft_id_1: DraftIndex = res.unwrap_json();
     assert_eq!(draft_id_1, 1);
@@ -576,7 +577,7 @@ fn test_delete_draft_group_before_fund() {
     assert_eq!(res.total_amount, amount * 2);
 
     // admin can discard non-empty draft group
-    let res = e.discard_draft_group(&e.owner, draft_group_id);
+    let res = e.discard_draft_group(&e.draft_operator, draft_group_id);
     assert!(res.is_ok());
 
     // draft group is not removed immediately
@@ -587,7 +588,7 @@ fn test_delete_draft_group_before_fund() {
     assert_eq!(res.total_amount, amount * 2);
 
     // admin cannot add drafts to the group
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("draft group is discarded"));
 
@@ -634,7 +635,7 @@ fn test_delete_draft_group_after_fund() {
     let users = Users::init(&e);
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
-    let res = e.create_draft_group(&e.owner);
+    let res = e.create_draft_group(&e.draft_operator);
     assert!(res.is_ok());
     let draft_group_id: DraftGroupIndex = res.unwrap_json();
     assert_eq!(draft_group_id, 0);
@@ -646,7 +647,7 @@ fn test_delete_draft_group_after_fund() {
     };
 
     // create draft 0
-    let res = e.create_draft(&e.owner, &draft);
+    let res = e.create_draft(&e.draft_operator, &draft);
     assert!(res.is_ok());
     let res: DraftIndex = res.unwrap_json();
     assert_eq!(res, 0);
@@ -657,7 +658,71 @@ fn test_delete_draft_group_after_fund() {
     assert_eq!(balance.0, amount);
 
     // admin cannot discard non-empty draft group after it's converted
-    let res = e.discard_draft_group(&e.owner, draft_group_id);
+    let res = e.discard_draft_group(&e.draft_operator, draft_group_id);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("draft group already funded"));
+}
+
+#[test]
+fn test_draft_operator_lockup_permissions() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let amount = d(60000, TOKEN_DECIMALS);
+    let schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC,
+            balance: 0,
+        },
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC,
+            balance: amount,
+        },
+    ]);
+
+    let lockup_create = LockupCreate {
+        account_id: users.alice.valid_account_id(),
+        schedule: schedule.clone(),
+        vesting_schedule: Some(VestingConditions::Schedule(schedule.clone())),
+    };
+
+    ft_storage_deposit(&e.owner, TOKEN_ID, &e.draft_operator.account_id);
+    e.ft_transfer(&e.owner, amount, &e.draft_operator);
+
+    // draft_operator cannot create drafts
+    let res = e.add_lockup(&e.draft_operator, amount, &lockup_create);
+    assert!(res.logs()[0].contains("Refund"));
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, 0);
+
+    // create draft by owner
+    let res = e.add_lockup(&e.owner, amount, &lockup_create);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+
+    let lockups = e.get_account_lockups(&users.alice);
+    assert_eq!(lockups.len(), 1);
+    let lockup_index = lockups[0].0;
+
+    // draft_operator cannot terminate drafts
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+    let res = e.terminate(&e.draft_operator, lockup_index);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Unauthorized"));
+
+    let draft_group_id = 0;
+    let draft = Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
+    };
+    assert!(e.create_draft_group(&e.draft_operator).is_ok());
+    let res = e.create_draft(&e.draft_operator, &draft);
+    assert!(res.is_ok());
+
+    // fund draft group by draft operator should fail
+    let res = e.fund_draft_group(&e.draft_operator, amount, draft_group_id);
+    assert!(res.logs()[0].contains("Refund"));
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, 0);
 }

@@ -293,7 +293,7 @@ impl Contract {
     }
 
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {
-        self.assert_operators_whitelist(&env::predecessor_account_id());
+        self.assert_draft_operators_whitelist(&env::predecessor_account_id());
 
         let index = self.next_draft_group_id;
         self.next_draft_group_id += 1;
@@ -312,7 +312,7 @@ impl Contract {
     }
 
     pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
-        self.assert_operators_whitelist(&env::predecessor_account_id());
+        self.assert_draft_operators_whitelist(&env::predecessor_account_id());
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
         let draft_ids: Vec<DraftIndex> = drafts
             .iter()
@@ -404,7 +404,7 @@ impl Contract {
     }
 
     pub fn discard_draft_group(&mut self, draft_group_id: DraftGroupIndex) {
-        self.assert_operators_whitelist(&env::predecessor_account_id());
+        self.assert_draft_operators_whitelist(&env::predecessor_account_id());
 
         let mut draft_group = self
             .draft_groups
