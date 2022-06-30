@@ -102,6 +102,27 @@ fn test_create_draft() {
 }
 
 #[test]
+fn test_create_draft_with_zero_amount_fails() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let amount = d(0, TOKEN_DECIMALS);
+    let draft_group_id = 0;
+    let draft = Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
+    };
+
+    assert!(e.create_draft_group(&e.owner).is_ok());
+
+    // create draft with zero amount must fail
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("expected total balance to be positive"));
+}
+
+#[test]
 fn test_create_drafts_batch() {
     let e = Env::init(None);
     let users = Users::init(&e);
