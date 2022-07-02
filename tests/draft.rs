@@ -726,3 +726,104 @@ fn test_draft_operator_lockup_permissions() {
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, 0);
 }
+
+#[test]
+fn test_draft_operator_permission_updates() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    // draft operator cannot control permissions for operators
+    let res = e.add_to_operators_whitelist(&e.draft_operator, &e.owner.valid_account_id());
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+
+    let res = e.remove_from_operators_whitelist(&e.draft_operator, &e.owner.valid_account_id());
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+
+    // draft operator cannot control permissions for draft operators
+    let res = e.add_to_draft_operators_whitelist(&e.draft_operator, &users.eve.valid_account_id());
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+
+    let res =
+        e.remove_from_draft_operators_whitelist(&e.draft_operator, &users.eve.valid_account_id());
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+
+    // operator can add draft_operators
+    let res = e.add_to_draft_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    assert!(res.is_ok());
+
+    // checking operators list
+    let res: Vec<AccountId> = e.get_operators_whitelist();
+    assert_eq!(res, vec![e.owner.account_id()]);
+    // checking draft operators list
+    let mut res: Vec<AccountId> = e.get_draft_operators_whitelist();
+    res.sort();
+    assert_eq!(
+        res,
+        vec![e.draft_operator.account_id(), users.eve.account_id()]
+    );
+
+    // operator can remove draft operators
+    let res =
+        e.remove_from_draft_operators_whitelist(&e.owner, &e.draft_operator.valid_account_id());
+    assert!(res.is_ok());
+    let res: Vec<AccountId> = e.get_draft_operators_whitelist();
+    assert_eq!(res, vec![users.eve.account_id()]);
+
+    // new draft operator can create draft groups
+    let res = e.create_draft_group(&users.eve);
+    assert!(res.is_ok());
+    // old draft operator cannot create draft groups
+    let res = e.create_draft_group(&e.draft_operator);
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in draft operators whitelist"));
+
+    // new draft operator is NOT operator, cannot manage users
+    let res = e.add_to_draft_operators_whitelist(&users.eve, &users.dude.valid_account_id());
+    assert!(!res.is_ok());
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+
+    // role presence in both lists
+    let res = e.add_to_draft_operators_whitelist(&e.owner, &e.owner.valid_account_id());
+    assert!(res.is_ok());
+    let mut res: Vec<AccountId> = e.get_draft_operators_whitelist();
+    res.sort();
+    assert_eq!(res, vec![users.eve.account_id(), e.owner.account_id()]);
+
+    // user is not removed from the draft operators list
+    let mut res: Vec<AccountId> = e.get_operators_whitelist();
+    res.sort();
+    assert_eq!(res, vec![e.owner.account_id()]);
+
+    // user still has operator abilities
+    let amount = d(60000, TOKEN_DECIMALS);
+    let lockup_create = LockupCreate::new_unlocked(users.alice.valid_account_id(), amount);
+    let res = e.add_lockup(&e.owner, amount, &lockup_create);
+    assert!(res.is_ok());
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+
+    // removing operator role, draft operator role must be retained
+    let res = e.remove_from_operators_whitelist(&e.owner, &e.owner.valid_account_id());
+    assert!(res.is_ok());
+    // operator role is removed
+    let res: Vec<AccountId> = e.get_operators_whitelist();
+    assert_eq!(res, vec![] as Vec<AccountId>);
+    // draft operator role is still present
+    let res: Vec<AccountId> = e.get_draft_operators_whitelist();
+    assert_eq!(res, vec![users.eve.account_id(), e.owner.account_id()]);
+
+    // operator role must be removed
+    let res = e.add_lockup(&e.owner, amount, &lockup_create);
+    assert!(res.is_ok());
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, 0);
+
+    // draft operator role is retained
+    let res = e.create_draft_group(&e.owner);
+    assert!(res.is_ok());
+}

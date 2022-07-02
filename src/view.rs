@@ -174,6 +174,10 @@ impl Contract {
         self.operators_whitelist.to_vec()
     }
 
+    pub fn get_draft_operators_whitelist(&self) -> Vec<AccountId> {
+        self.draft_operators_whitelist.to_vec()
+    }
+
     pub fn hash_schedule(&self, schedule: Schedule) -> Base58CryptoHash {
         schedule.hash().into()
     }

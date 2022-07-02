@@ -3,7 +3,7 @@
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
 pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
-use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
+pub use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
 pub use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
@@ -363,6 +363,34 @@ impl Env {
         )
     }
 
+    pub fn remove_from_draft_operators_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .remove_from_draft_operators_whitelist(account_id.clone()),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn add_to_draft_operators_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .add_to_draft_operators_whitelist(account_id.clone()),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
     pub fn create_draft_group(&self, user: &UserAccount) -> ExecutionResult {
         user.function_call(self.contract.contract.create_draft_group(), DEFAULT_GAS, 0)
     }
@@ -448,6 +476,12 @@ impl Env {
     pub fn get_operators_whitelist(&self) -> Vec<AccountId> {
         self.near
             .view_method_call(self.contract.contract.get_operators_whitelist())
+            .unwrap_json()
+    }
+
+    pub fn get_draft_operators_whitelist(&self) -> Vec<AccountId> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft_operators_whitelist())
             .unwrap_json()
     }
 

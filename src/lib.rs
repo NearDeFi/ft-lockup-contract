@@ -292,6 +292,20 @@ impl Contract {
         self.operators_whitelist.remove(account_id.as_ref());
     }
 
+    #[payable]
+    pub fn add_to_draft_operators_whitelist(&mut self, account_id: ValidAccountId) {
+        assert_one_yocto();
+        self.assert_operators_whitelist(&env::predecessor_account_id());
+        self.draft_operators_whitelist.insert(account_id.as_ref());
+    }
+
+    #[payable]
+    pub fn remove_from_draft_operators_whitelist(&mut self, account_id: ValidAccountId) {
+        assert_one_yocto();
+        self.assert_operators_whitelist(&env::predecessor_account_id());
+        self.draft_operators_whitelist.remove(account_id.as_ref());
+    }
+
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {
         self.assert_draft_operators_whitelist(&env::predecessor_account_id());
 
