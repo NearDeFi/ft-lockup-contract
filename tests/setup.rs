@@ -335,15 +335,43 @@ impl Env {
         )
     }
 
+    pub fn remove_from_operators_whitelist_single(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "remove_from_operators_whitelist",
+            &json!({ "account_id": account_id }).to_string().into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn add_to_operators_whitelist_single(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "add_to_operators_whitelist",
+            &json!({ "account_id": account_id }).to_string().into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
     pub fn remove_from_operators_whitelist(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
-        user.function_call(
-            self.contract
-                .contract
-                .remove_from_operators_whitelist(account_id.clone()),
+        user.call(
+            self.contract.account_id(),
+            "remove_from_operators_whitelist",
+            &json!({ "account_ids": vec![account_id] }).to_string().into_bytes(),
             DEFAULT_GAS,
             1,
         )
@@ -354,10 +382,10 @@ impl Env {
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
-        user.function_call(
-            self.contract
-                .contract
-                .add_to_operators_whitelist(account_id.clone()),
+        user.call(
+            self.contract.account_id(),
+            "add_to_operators_whitelist",
+            &json!({ "account_ids": vec![account_id] }).to_string().into_bytes(),
             DEFAULT_GAS,
             1,
         )
@@ -371,7 +399,7 @@ impl Env {
         user.function_call(
             self.contract
                 .contract
-                .remove_from_draft_operators_whitelist(account_id.clone()),
+                .remove_from_draft_operators_whitelist(vec![account_id.clone()]),
             DEFAULT_GAS,
             1,
         )
@@ -385,7 +413,7 @@ impl Env {
         user.function_call(
             self.contract
                 .contract
-                .add_to_draft_operators_whitelist(account_id.clone()),
+                .add_to_draft_operators_whitelist(vec![account_id.clone()]),
             DEFAULT_GAS,
             1,
         )

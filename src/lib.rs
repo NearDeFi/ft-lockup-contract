@@ -278,32 +278,60 @@ impl Contract {
         }
     }
 
+    // preserving both options for API compatibility
     #[payable]
-    pub fn add_to_operators_whitelist(&mut self, account_id: ValidAccountId) {
+    pub fn add_to_operators_whitelist(
+        &mut self,
+        account_id: Option<ValidAccountId>,
+        account_ids: Option<Vec<ValidAccountId>>,
+    ) {
         assert_one_yocto();
         self.assert_operators_whitelist(&env::predecessor_account_id());
-        self.operators_whitelist.insert(account_id.as_ref());
+        let account_ids = if let Some(account_ids) = account_ids {
+            account_ids
+        } else {
+            vec![account_id.expect("expected either account_id or account_ids")]
+        };
+        for account_id in account_ids {
+            self.operators_whitelist.insert(account_id.as_ref());
+        }
+    }
+
+    // preserving both options for API compatibility
+    #[payable]
+    pub fn remove_from_operators_whitelist(
+        &mut self,
+        account_id: Option<ValidAccountId>,
+        account_ids: Option<Vec<ValidAccountId>>,
+    ) {
+        assert_one_yocto();
+        self.assert_operators_whitelist(&env::predecessor_account_id());
+        let account_ids = if let Some(account_ids) = account_ids {
+            account_ids
+        } else {
+            vec![account_id.expect("expected either account_id or account_ids")]
+        };
+        for account_id in account_ids {
+            self.operators_whitelist.remove(&account_id.into());
+        }
     }
 
     #[payable]
-    pub fn remove_from_operators_whitelist(&mut self, account_id: ValidAccountId) {
+    pub fn add_to_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_operators_whitelist(&env::predecessor_account_id());
-        self.operators_whitelist.remove(account_id.as_ref());
+        for account_id in account_ids {
+            self.draft_operators_whitelist.insert(account_id.as_ref());
+        }
     }
 
     #[payable]
-    pub fn add_to_draft_operators_whitelist(&mut self, account_id: ValidAccountId) {
+    pub fn remove_from_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_operators_whitelist(&env::predecessor_account_id());
-        self.draft_operators_whitelist.insert(account_id.as_ref());
-    }
-
-    #[payable]
-    pub fn remove_from_draft_operators_whitelist(&mut self, account_id: ValidAccountId) {
-        assert_one_yocto();
-        self.assert_operators_whitelist(&env::predecessor_account_id());
-        self.draft_operators_whitelist.remove(account_id.as_ref());
+        for account_id in account_ids {
+            self.draft_operators_whitelist.remove(account_id.as_ref());
+        }
     }
 
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {

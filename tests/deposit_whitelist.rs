@@ -2,6 +2,35 @@ mod setup;
 
 use crate::setup::*;
 
+// test old api with single account_id still works
+#[test]
+fn test_operators_whitelist_get_single() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    // operators whitelist has owner by default
+    let operators_whitelist = e.get_operators_whitelist();
+    assert_eq!(operators_whitelist, vec![e.owner.account_id.clone()]);
+
+    // user from whitelist can add other users
+    let res = e.add_to_operators_whitelist_single(&e.owner, &users.eve.valid_account_id());
+    assert!(res.is_ok());
+
+    let operators_whitelist = e.get_operators_whitelist();
+    assert_eq!(
+        operators_whitelist,
+        vec![e.owner.account_id.clone(), users.eve.account_id.clone()]
+    );
+
+    // user from whiltelist can remove other users
+    let res = e.remove_from_operators_whitelist_single(&users.eve, &e.owner.valid_account_id());
+    assert!(res.is_ok());
+
+    let operators_whitelist = e.get_operators_whitelist();
+    assert_eq!(operators_whitelist, vec![users.eve.account_id.clone()]);
+}
+
 #[test]
 fn test_operators_whitelist_get() {
     let e = Env::init(None);
