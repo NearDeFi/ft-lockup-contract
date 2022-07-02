@@ -230,7 +230,7 @@ impl Contract {
         termination_timestamp: Option<TimestampSec>,
     ) -> PromiseOrValue<WrappedBalance> {
         assert_one_yocto();
-        let account_id = env::predecessor_account_id();
+        self.assert_operators_whitelist(&env::predecessor_account_id());
         let mut lockup = self
             .lockups
             .get(lockup_index as _)
@@ -241,8 +241,8 @@ impl Contract {
             termination_timestamp >= current_timestamp,
             "expected termination_timestamp >= now",
         );
-        let unvested_balance =
-            lockup.terminate(&account_id, hashed_schedule, termination_timestamp);
+        let (unvested_balance, beneficiary_id) =
+            lockup.terminate(hashed_schedule, termination_timestamp);
         self.lockups.replace(lockup_index as _, &lockup);
 
         // no need to store empty lockup
@@ -258,7 +258,7 @@ impl Contract {
 
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
-                account_id.clone(),
+                beneficiary_id.clone(),
                 unvested_balance.into(),
                 Some(format!("Terminated lockup #{}", lockup_index)),
                 &self.token_account_id,
@@ -266,7 +266,7 @@ impl Contract {
                 GAS_FOR_FT_TRANSFER,
             )
             .then(ext_self::after_lockup_termination(
-                account_id,
+                beneficiary_id,
                 unvested_balance.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,

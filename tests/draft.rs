@@ -503,7 +503,8 @@ fn test_draft_payer_update() {
         "expected beneficiary_id from draft group payer_id",
     );
 
-    let res: WrappedBalance = e.terminate(&users.dude, lockup_index).unwrap_json();
+    // terminating as owner, unvested balance returns to the payer
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
     let balance = e.ft_balance_of(&users.alice);
     assert_eq!(balance, 0);
@@ -709,7 +710,7 @@ fn test_draft_operator_lockup_permissions() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let res = e.terminate(&e.draft_operator, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Unauthorized"));
+    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
 
     let draft_group_id = 0;
     let draft = Draft {
