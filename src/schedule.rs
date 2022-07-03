@@ -16,21 +16,35 @@ pub struct Checkpoint {
 pub struct Schedule(pub Vec<Checkpoint>);
 
 impl Schedule {
-    pub fn new_unlocked_from(total_balance: Balance, start_timestamp: TimestampSec) -> Self {
+    pub fn new_zero_balance_from_to(
+        start_timestamp: TimestampSec,
+        finish_timestamp: TimestampSec,
+    ) -> Self {
+        assert!(finish_timestamp > start_timestamp, "Invariant");
+
         Self(vec![
             Checkpoint {
                 timestamp: start_timestamp,
                 balance: 0,
             },
             Checkpoint {
-                timestamp: start_timestamp + 1,
-                balance: total_balance,
+                timestamp: finish_timestamp,
+                balance: 0,
             },
         ])
     }
 
     pub fn new_unlocked(total_balance: Balance) -> Self {
-        Self::new_unlocked_from(total_balance, 0)
+        Self(vec![
+            Checkpoint {
+                timestamp: 0,
+                balance: 0,
+            },
+            Checkpoint {
+                timestamp: 1,
+                balance: total_balance,
+            },
+        ])
     }
 
     pub fn assert_valid(&self, total_balance: Balance) {
@@ -113,10 +127,18 @@ impl Schedule {
 
     /// Terminates the lockup schedule earlier.
     /// Assumes new_total_balance is not greater than the current total balance.
-    pub fn terminate(&mut self, new_total_balance: Balance) {
+    pub fn terminate(&mut self, new_total_balance: Balance, finish_timestamp: TimestampSec) {
         if new_total_balance == 0 {
-            // preserve start timestamp for transparency
-            self.0 = Self::new_unlocked_from(0, self.0[0].timestamp).0;
+            // finish_timestamp is a hint, only used for fully unvested schedules
+            // can be overwritten to preserve schedule invariants
+            // used to preserve part of the schedule before the termination happens
+            let start_timestamp = self.0[0].timestamp;
+            let finish_timestamp = if finish_timestamp > start_timestamp {
+                finish_timestamp
+            } else {
+                start_timestamp + 1
+            };
+            self.0 = Self::new_zero_balance_from_to(start_timestamp, finish_timestamp).0;
             return;
         }
         assert!(

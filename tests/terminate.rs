@@ -387,6 +387,93 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
 }
 
 #[test]
+fn test_lockup_terminate_custom_vesting_terminate_before_schedule_start() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    let amount = d(60000, TOKEN_DECIMALS);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert!(lockups.is_empty());
+
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
+    assert!(res.is_ok());
+    ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
+    e.ft_transfer(&e.owner, amount, &users.eve);
+
+    let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
+    let lockup_create = LockupCreate {
+        account_id: users.alice.valid_account_id(),
+        schedule: lockup_schedule.clone(),
+        vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
+    };
+
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC - ONE_YEAR_SEC);
+    let balance: WrappedBalance = e
+        .add_lockup(&users.eve, amount, &lockup_create)
+        .unwrap_json();
+    assert_eq!(balance.0, amount);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert_eq!(lockups.len(), 1);
+    let lockup_index = lockups[0].0;
+
+    // 1 second before lockup schedule start
+    let termination_timestamp: TimestampSec = GENESIS_TIMESTAMP_SEC - 1;
+    e.set_time_sec(termination_timestamp);
+    let lockups = e.get_account_lockups(&users.alice);
+    assert_eq!(lockups[0].1.total_balance, amount);
+    assert_eq!(lockups[0].1.claimed_balance, 0);
+    assert_eq!(lockups[0].1.unclaimed_balance, 0);
+
+    // TERMINATE
+    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    assert_eq!(res.0, amount);
+
+    let terminator_balance = e.ft_balance_of(&users.eve);
+    assert_eq!(terminator_balance, amount);
+
+    // Checking lockup
+
+    // after ALL the schedules have finished
+
+    let lockups = e.get_account_lockups(&users.alice);
+    assert!(lockups.is_empty());
+
+    let lockup = e.get_lockup(lockup_index);
+    assert_eq!(lockup.total_balance, 0);
+    assert_eq!(lockup.claimed_balance, 0);
+    assert_eq!(lockup.unclaimed_balance, 0);
+
+    println!("{:#?}", lockup);
+    assert_eq!(
+        lockup.schedule.0.len(),
+        2,
+        "expected terminated schedule to have two checkpoints"
+    );
+    // starting checkpoint is preserved
+    assert_eq!(lockup.schedule.0[0].balance, 0);
+    assert_eq!(
+        lockup.schedule.0[0].timestamp, // trimmed schedule
+        lockup_schedule.0[0].timestamp, // original schedule
+        "expected terminate schedule start to be preserved"
+    );
+    // finish checkpoint is termination timestamp
+    assert_eq!(lockup.schedule.0[1].balance, 0);
+    assert_eq!(
+        lockup.schedule.0[1].timestamp,     // trimmed schedule
+        lockup_schedule.0[0].timestamp + 1, // right after schedule start
+        "expected terminate schedule finish right after start"
+    );
+
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4);
+    // Trying to claim
+    let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
+    assert_eq!(res.0, 0);
+
+    let balance = e.ft_balance_of(&users.alice);
+    assert_eq!(balance, 0);
+}
+
+#[test]
 fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     let e = Env::init(None);
     let users = Users::init(&e);
@@ -455,7 +542,15 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
         lockup_schedule.0[0].timestamp, // original schedule
         "expected terminate schedule start to be preserved"
     );
+    // finish checkpoint is termination timestamp
+    assert_eq!(lockup.schedule.0[1].balance, 0);
+    assert_eq!(
+        lockup.schedule.0[1].timestamp, // trimmed schedule
+        termination_timestamp,
+        "expected terminate schedule finish to be at termination timestamp"
+    );
 
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4);
     // Trying to claim
     let res: WrappedBalance = e.claim(&users.alice).unwrap_json();
     assert_eq!(res.0, 0);

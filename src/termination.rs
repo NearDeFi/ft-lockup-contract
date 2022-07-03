@@ -52,7 +52,8 @@ impl Lockup {
         .unlocked_balance(termination_timestamp);
         let unvested_balance = total_balance - vested_balance;
         if unvested_balance > 0 {
-            self.schedule.terminate(vested_balance);
+            self.schedule
+                .terminate(vested_balance, termination_timestamp);
         }
         (unvested_balance, termination_config.beneficiary_id.into())
     }
