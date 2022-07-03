@@ -403,7 +403,7 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     let (lockup_schedule, vesting_schedule) = lockup_vesting_schedule(amount);
     let lockup_create = LockupCreate {
         account_id: users.alice.valid_account_id(),
-        schedule: lockup_schedule,
+        schedule: lockup_schedule.clone(),
         vesting_schedule: Some(VestingConditions::Schedule(vesting_schedule)),
     };
 
@@ -416,7 +416,8 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     let lockup_index = lockups[0].0;
 
     // 1Y - 1 before cliff termination
-    e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1);
+    let termination_timestamp: TimestampSec = GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1;
+    e.set_time_sec(termination_timestamp);
     let lockups = e.get_account_lockups(&users.alice);
     assert_eq!(lockups[0].1.total_balance, amount);
     assert_eq!(lockups[0].1.claimed_balance, 0);
@@ -440,6 +441,20 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     assert_eq!(lockup.total_balance, 0);
     assert_eq!(lockup.claimed_balance, 0);
     assert_eq!(lockup.unclaimed_balance, 0);
+
+    println!("{:#?}", lockup);
+    assert_eq!(
+        lockup.schedule.0.len(),
+        2,
+        "expected terminated schedule to have two checkpoints"
+    );
+    // starting checkpoint is preserved
+    assert_eq!(lockup.schedule.0[0].balance, 0);
+    assert_eq!(
+        lockup.schedule.0[0].timestamp, // trimmed schedule
+        lockup_schedule.0[0].timestamp, // original schedule
+        "expected terminate schedule start to be preserved"
+    );
 
     // Trying to claim
     let res: WrappedBalance = e.claim(&users.alice).unwrap_json();

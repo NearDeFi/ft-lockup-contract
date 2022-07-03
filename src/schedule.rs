@@ -16,17 +16,21 @@ pub struct Checkpoint {
 pub struct Schedule(pub Vec<Checkpoint>);
 
 impl Schedule {
-    pub fn new_unlocked(total_balance: Balance) -> Self {
+    pub fn new_unlocked_from(total_balance: Balance, start_timestamp: TimestampSec) -> Self {
         Self(vec![
             Checkpoint {
-                timestamp: 0,
+                timestamp: start_timestamp,
                 balance: 0,
             },
             Checkpoint {
-                timestamp: 1,
+                timestamp: start_timestamp + 1,
                 balance: total_balance,
             },
         ])
+    }
+
+    pub fn new_unlocked(total_balance: Balance) -> Self {
+        Self::new_unlocked_from(total_balance, 0)
     }
 
     pub fn assert_valid(&self, total_balance: Balance) {
@@ -111,7 +115,8 @@ impl Schedule {
     /// Assumes new_total_balance is not greater than the current total balance.
     pub fn terminate(&mut self, new_total_balance: Balance) {
         if new_total_balance == 0 {
-            self.0 = Self::new_unlocked(0).0;
+            // preserve start timestamp for transparency
+            self.0 = Self::new_unlocked_from(0, self.0[0].timestamp).0;
             return;
         }
         assert!(

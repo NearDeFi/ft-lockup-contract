@@ -1,0 +1,9 @@
+#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
+pub struct LockupCreate {
+    pub account_id: ValidAccountId,
+    pub schedule: Schedule,
+    pub vesting_schedule: Option<HashOrSchedule>,
+}
+
