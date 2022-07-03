@@ -11,7 +11,7 @@ fn test_lockup_terminate_with_timestamp_in_future() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);

@@ -446,11 +446,11 @@ fn test_draft_payer_update() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let amount = d(60000, TOKEN_DECIMALS);
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.dude.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.dude.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     e.ft_transfer(&e.owner, amount, &users.dude);
@@ -710,7 +710,7 @@ fn test_draft_operator_lockup_permissions() {
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
     let res = e.terminate(&e.draft_operator, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     let draft_group_id = 0;
     let draft = Draft {
@@ -734,31 +734,31 @@ fn test_draft_operator_permission_updates() {
     let users = Users::init(&e);
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
-    // draft operator cannot control permissions for operators
-    let res = e.add_to_operators_whitelist(&e.draft_operator, &e.owner.valid_account_id());
+    // draft operator cannot control permissions for deposit
+    let res = e.add_to_deposit_whitelist(&e.draft_operator, &e.owner.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
-    let res = e.remove_from_operators_whitelist(&e.draft_operator, &e.owner.valid_account_id());
+    let res = e.remove_from_deposit_whitelist(&e.draft_operator, &e.owner.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // draft operator cannot control permissions for draft operators
     let res = e.add_to_draft_operators_whitelist(&e.draft_operator, &users.eve.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     let res =
         e.remove_from_draft_operators_whitelist(&e.draft_operator, &users.eve.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
-    // operator can add draft_operators
+    // deposit_whitelist can add draft_operators
     let res = e.add_to_draft_operators_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
 
-    // checking operators list
-    let res: Vec<AccountId> = e.get_operators_whitelist();
+    // checking deposit list
+    let res: Vec<AccountId> = e.get_deposit_whitelist();
     assert_eq!(res, vec![e.owner.account_id()]);
     // checking draft operators list
     let mut res: Vec<AccountId> = e.get_draft_operators_whitelist();
@@ -768,7 +768,7 @@ fn test_draft_operator_permission_updates() {
         vec![e.draft_operator.account_id(), users.eve.account_id()]
     );
 
-    // operator can remove draft operators
+    // deposit can remove draft operators
     let res =
         e.remove_from_draft_operators_whitelist(&e.owner, &e.draft_operator.valid_account_id());
     assert!(res.is_ok());
@@ -783,10 +783,10 @@ fn test_draft_operator_permission_updates() {
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("Not in draft operators whitelist"));
 
-    // new draft operator is NOT operator, cannot manage users
+    // new draft operator is NOT deposit, cannot manage users
     let res = e.add_to_draft_operators_whitelist(&users.eve, &users.dude.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // role presence in both lists
     let res = e.add_to_draft_operators_whitelist(&e.owner, &e.owner.valid_account_id());
@@ -796,11 +796,11 @@ fn test_draft_operator_permission_updates() {
     assert_eq!(res, vec![users.eve.account_id(), e.owner.account_id()]);
 
     // user is not removed from the draft operators list
-    let mut res: Vec<AccountId> = e.get_operators_whitelist();
+    let mut res: Vec<AccountId> = e.get_deposit_whitelist();
     res.sort();
     assert_eq!(res, vec![e.owner.account_id()]);
 
-    // user still has operator abilities
+    // user still has deposit abilities
     let amount = d(60000, TOKEN_DECIMALS);
     let lockup_create = LockupCreate::new_unlocked(users.alice.valid_account_id(), amount);
     let res = e.add_lockup(&e.owner, amount, &lockup_create);
@@ -808,17 +808,17 @@ fn test_draft_operator_permission_updates() {
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount);
 
-    // removing operator role, draft operator role must be retained
-    let res = e.remove_from_operators_whitelist(&e.owner, &e.owner.valid_account_id());
+    // removing deposit role, draft operator role must be retained
+    let res = e.remove_from_deposit_whitelist(&e.owner, &e.owner.valid_account_id());
     assert!(res.is_ok());
-    // operator role is removed
-    let res: Vec<AccountId> = e.get_operators_whitelist();
+    // deposit role is removed
+    let res: Vec<AccountId> = e.get_deposit_whitelist();
     assert_eq!(res, vec![] as Vec<AccountId>);
     // draft operator role is still present
     let res: Vec<AccountId> = e.get_draft_operators_whitelist();
     assert_eq!(res, vec![users.eve.account_id(), e.owner.account_id()]);
 
-    // operator role must be removed
+    // deposit role must be removed
     let res = e.add_lockup(&e.owner, amount, &lockup_create);
     assert!(res.is_ok());
     let balance: WrappedBalance = res.unwrap_json();

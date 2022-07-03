@@ -164,7 +164,7 @@ pub fn to_nano(timestamp: u32) -> Timestamp {
 }
 
 impl Env {
-    pub fn init(operators_whitelist: Option<Vec<ValidAccountId>>) -> Self {
+    pub fn init(deposit_whitelist: Option<Vec<ValidAccountId>>) -> Self {
         let mut genesis_config = GenesisConfig::default();
         genesis_config.block_prod_time = 0;
         let root = init_simulator(Some(genesis_config));
@@ -204,7 +204,7 @@ impl Env {
             gas: DEFAULT_GAS,
             init_method: new(
                 token.valid_account_id(),
-                operators_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()]),
+                deposit_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()]),
                 Some(vec![draft_operator.valid_account_id()])
             )
         );
@@ -335,57 +335,61 @@ impl Env {
         )
     }
 
-    pub fn remove_from_operators_whitelist_single(
+    pub fn remove_from_deposit_whitelist_single(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
         user.call(
             self.contract.account_id(),
-            "remove_from_operators_whitelist",
+            "remove_from_deposit_whitelist",
             &json!({ "account_id": account_id }).to_string().into_bytes(),
             DEFAULT_GAS,
             1,
         )
     }
 
-    pub fn add_to_operators_whitelist_single(
+    pub fn add_to_deposit_whitelist_single(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
         user.call(
             self.contract.account_id(),
-            "add_to_operators_whitelist",
+            "add_to_deposit_whitelist",
             &json!({ "account_id": account_id }).to_string().into_bytes(),
             DEFAULT_GAS,
             1,
         )
     }
 
-    pub fn remove_from_operators_whitelist(
+    pub fn remove_from_deposit_whitelist(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
         user.call(
             self.contract.account_id(),
-            "remove_from_operators_whitelist",
-            &json!({ "account_ids": vec![account_id] }).to_string().into_bytes(),
+            "remove_from_deposit_whitelist",
+            &json!({ "account_ids": vec![account_id] })
+                .to_string()
+                .into_bytes(),
             DEFAULT_GAS,
             1,
         )
     }
 
-    pub fn add_to_operators_whitelist(
+    pub fn add_to_deposit_whitelist(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
         user.call(
             self.contract.account_id(),
-            "add_to_operators_whitelist",
-            &json!({ "account_ids": vec![account_id] }).to_string().into_bytes(),
+            "add_to_deposit_whitelist",
+            &json!({ "account_ids": vec![account_id] })
+                .to_string()
+                .into_bytes(),
             DEFAULT_GAS,
             1,
         )
@@ -501,9 +505,9 @@ impl Env {
             .unwrap_json()
     }
 
-    pub fn get_operators_whitelist(&self) -> Vec<AccountId> {
+    pub fn get_deposit_whitelist(&self) -> Vec<AccountId> {
         self.near
-            .view_method_call(self.contract.contract.get_operators_whitelist())
+            .view_method_call(self.contract.contract.get_deposit_whitelist())
             .unwrap_json()
     }
 

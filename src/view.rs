@@ -170,8 +170,8 @@ impl Contract {
             .collect()
     }
 
-    pub fn get_operators_whitelist(&self) -> Vec<AccountId> {
-        self.operators_whitelist.to_vec()
+    pub fn get_deposit_whitelist(&self) -> Vec<AccountId> {
+        self.deposit_whitelist.to_vec()
     }
 
     pub fn get_draft_operators_whitelist(&self) -> Vec<AccountId> {

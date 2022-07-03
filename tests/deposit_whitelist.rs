@@ -4,35 +4,35 @@ use crate::setup::*;
 
 // test old api with single account_id still works
 #[test]
-fn test_operators_whitelist_get_single() {
+fn test_deposit_whitelist_get_single() {
     let e = Env::init(None);
     let users = Users::init(&e);
     e.set_time_sec(GENESIS_TIMESTAMP_SEC);
 
-    // operators whitelist has owner by default
-    let operators_whitelist = e.get_operators_whitelist();
-    assert_eq!(operators_whitelist, vec![e.owner.account_id.clone()]);
+    // deposit whitelist has owner by default
+    let deposit_whitelist = e.get_deposit_whitelist();
+    assert_eq!(deposit_whitelist, vec![e.owner.account_id.clone()]);
 
     // user from whitelist can add other users
-    let res = e.add_to_operators_whitelist_single(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist_single(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
 
-    let operators_whitelist = e.get_operators_whitelist();
+    let deposit_whitelist = e.get_deposit_whitelist();
     assert_eq!(
-        operators_whitelist,
+        deposit_whitelist,
         vec![e.owner.account_id.clone(), users.eve.account_id.clone()]
     );
 
     // user from whiltelist can remove other users
-    let res = e.remove_from_operators_whitelist_single(&users.eve, &e.owner.valid_account_id());
+    let res = e.remove_from_deposit_whitelist_single(&users.eve, &e.owner.valid_account_id());
     assert!(res.is_ok());
 
-    let operators_whitelist = e.get_operators_whitelist();
-    assert_eq!(operators_whitelist, vec![users.eve.account_id.clone()]);
+    let deposit_whitelist = e.get_deposit_whitelist();
+    assert_eq!(deposit_whitelist, vec![users.eve.account_id.clone()]);
 }
 
 #[test]
-fn test_operators_whitelist_get() {
+fn test_deposit_whitelist_get() {
     let e = Env::init(None);
     let users = Users::init(&e);
     let amount = d(1, TOKEN_DECIMALS);
@@ -40,9 +40,9 @@ fn test_operators_whitelist_get() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    // operators whitelist has owner by default
-    let operators_whitelist = e.get_operators_whitelist();
-    assert_eq!(operators_whitelist, vec![e.owner.account_id.clone()]);
+    // deposit whitelist has owner by default
+    let deposit_whitelist = e.get_deposit_whitelist();
+    assert_eq!(deposit_whitelist, vec![e.owner.account_id.clone()]);
 
     // user from whitelist can create lockups
     let lockup_create = LockupCreate {
@@ -65,31 +65,31 @@ fn test_operators_whitelist_get() {
     assert_eq!(lockups.len(), 1);
 
     // user from whitelist can add other users
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
 
-    let operators_whitelist = e.get_operators_whitelist();
+    let deposit_whitelist = e.get_deposit_whitelist();
     assert_eq!(
-        operators_whitelist,
+        deposit_whitelist,
         vec![e.owner.account_id.clone(), users.eve.account_id.clone()]
     );
 
     // user from whiltelist can remove other users
-    let res = e.remove_from_operators_whitelist(&users.eve, &e.owner.valid_account_id());
+    let res = e.remove_from_deposit_whitelist(&users.eve, &e.owner.valid_account_id());
     assert!(res.is_ok());
 
-    let operators_whitelist = e.get_operators_whitelist();
-    assert_eq!(operators_whitelist, vec![users.eve.account_id.clone()]);
+    let deposit_whitelist = e.get_deposit_whitelist();
+    assert_eq!(deposit_whitelist, vec![users.eve.account_id.clone()]);
 
     // user not from whitelist cannot add users
-    let res = e.add_to_operators_whitelist(&e.owner, &users.dude.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.dude.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // user not from whitelist cannot remove users
-    let res = e.remove_from_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.remove_from_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // user not in whitelist cannot create lockups
     let res = e.add_lockup(&e.owner, amount, &lockup_create);
@@ -101,8 +101,8 @@ fn test_operators_whitelist_get() {
     assert_eq!(lockups.len(), 1);
 
     // user from whiltelist can remove itself from the list, even if it's the last user
-    let res = e.remove_from_operators_whitelist(&users.eve, &users.eve.valid_account_id());
+    let res = e.remove_from_deposit_whitelist(&users.eve, &users.eve.valid_account_id());
     assert!(res.is_ok());
-    let operators_whitelist = e.get_operators_whitelist();
-    assert!(operators_whitelist.is_empty());
+    let deposit_whitelist = e.get_deposit_whitelist();
+    assert!(deposit_whitelist.is_empty());
 }

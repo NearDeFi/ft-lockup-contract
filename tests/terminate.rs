@@ -12,7 +12,7 @@ fn test_terminate_basic_payer_logic() {
     assert!(lockups.is_empty());
 
     // adding another owner
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -46,15 +46,15 @@ fn test_terminate_basic_payer_logic() {
     // receiver cannot terminate
     let res = e.terminate(&users.alice, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // random user cannot terminate
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     let res = e.terminate(&users.dude, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Not in operators whitelist"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
-    // non-payer operator can terminate the lockup
+    // non-payer deposit whitelist can terminate the lockup
     let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
     let balance = e.ft_balance_of(&users.eve);
@@ -116,7 +116,7 @@ fn test_lockup_terminate_no_vesting_schedule() {
     assert!(lockups.is_empty());
 
     // adding another owner
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -215,7 +215,7 @@ fn test_lockup_terminate_custom_vesting_hash() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -289,7 +289,7 @@ fn test_lockup_terminate_custom_vesting_invalid_hash() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -342,7 +342,7 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -395,7 +395,7 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -458,7 +458,7 @@ fn test_lockup_terminate_custom_vesting_before_release() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -544,7 +544,7 @@ fn test_lockup_terminate_custom_vesting_during_release() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -632,7 +632,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
@@ -719,7 +719,7 @@ fn test_lockup_terminate_custom_vesting_after_vesting_finished() {
     let lockups = e.get_account_lockups(&users.alice);
     assert!(lockups.is_empty());
 
-    let res = e.add_to_operators_whitelist(&e.owner, &users.eve.valid_account_id());
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.eve.valid_account_id());
     assert!(res.is_ok());
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.eve.account_id);
     e.ft_transfer(&e.owner, amount, &users.eve);
