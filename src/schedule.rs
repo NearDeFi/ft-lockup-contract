@@ -34,17 +34,22 @@ impl Schedule {
         ])
     }
 
-    pub fn new_unlocked(total_balance: Balance) -> Self {
+    pub fn new_unlocked_since(total_balance: Balance, timestamp: TimestampSec) -> Self {
+        assert!(timestamp > 0, "Invariant");
         Self(vec![
             Checkpoint {
-                timestamp: 0,
+                timestamp: timestamp - 1,
                 balance: 0,
             },
             Checkpoint {
-                timestamp: 1,
+                timestamp: timestamp,
                 balance: total_balance,
             },
         ])
+    }
+
+    pub fn new_unlocked(total_balance: Balance) -> Self {
+        Self::new_unlocked_since(total_balance, 1)
     }
 
     pub fn assert_valid(&self, total_balance: Balance) {
