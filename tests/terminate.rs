@@ -46,16 +46,16 @@ fn test_terminate_basic_payer_logic() {
     // receiver cannot terminate
     let res = e.terminate(&users.alice, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Unauthorized"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
     // random user cannot terminate
     ft_storage_deposit(&e.owner, TOKEN_ID, &users.dude.account_id);
     let res = e.terminate(&users.dude, lockup_index);
     assert!(!res.is_ok());
-    assert!(format!("{:?}", res.status()).contains("Unauthorized"));
+    assert!(format!("{:?}", res.status()).contains("Not in deposit whitelist"));
 
-    // payer can terminate the lockup
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    // non-payer deposit whitelist can terminate the lockup
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
     let balance = e.ft_balance_of(&users.eve);
     assert_eq!(balance, amount);
@@ -78,7 +78,7 @@ fn test_terminate_basic_payer_logic() {
     let lockup_index = lockups[0].0;
 
     // cannot terminate account without lockup
-    let res = e.terminate(&users.eve, lockup_index);
+    let res = e.terminate(&e.owner, lockup_index);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("No termination config"));
 
@@ -178,7 +178,7 @@ fn test_lockup_terminate_no_vesting_schedule() {
 
     // TERMINATE
     ft_storage_deposit(&users.eve, TOKEN_ID, &users.eve.account_id);
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount / 2);
 
     let terminator_balance = e.ft_balance_of(&users.eve);
@@ -245,7 +245,7 @@ fn test_lockup_terminate_custom_vesting_hash() {
 
     // TERMINATE
     let res: WrappedBalance = e
-        .terminate_with_schedule(&users.eve, lockup_index, vesting_schedule)
+        .terminate_with_schedule(&e.owner, lockup_index, vesting_schedule)
         .unwrap_json();
     assert_eq!(res.0, amount * 3 / 4);
     let terminator_balance = e.ft_balance_of(&users.eve);
@@ -328,7 +328,7 @@ fn test_lockup_terminate_custom_vesting_invalid_hash() {
             balance: amount,
         },
     ]);
-    let res = e.terminate_with_schedule(&users.eve, lockup_index, fake_schedule);
+    let res = e.terminate_with_schedule(&e.owner, lockup_index, fake_schedule);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("The revealed schedule hash doesn't match"));
 }
@@ -381,7 +381,7 @@ fn test_lockup_terminate_custom_vesting_incompatible_vesting_schedule_by_hash() 
     assert_eq!(lockups[0].1.unclaimed_balance, 0);
 
     // TERMINATE
-    let res = e.terminate_with_schedule(&users.eve, lockup_index, incompatible_vesting_schedule);
+    let res = e.terminate_with_schedule(&e.owner, lockup_index, incompatible_vesting_schedule);
     assert!(!res.is_ok());
     assert!(format!("{:?}", res.status()).contains("The lockup schedule is ahead of"));
 }
@@ -423,7 +423,7 @@ fn test_lockup_terminate_custom_vesting_terminate_before_cliff() {
     assert_eq!(lockups[0].1.unclaimed_balance, 0);
 
     // TERMINATE
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount);
 
     let terminator_balance = e.ft_balance_of(&users.eve);
@@ -486,7 +486,7 @@ fn test_lockup_terminate_custom_vesting_before_release() {
     assert_eq!(lockups[0].1.unclaimed_balance, 0);
 
     // TERMINATE
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount * 3 / 4);
     let terminator_balance = e.ft_balance_of(&users.eve);
     assert_eq!(terminator_balance, amount * 3 / 4);
@@ -579,7 +579,7 @@ fn test_lockup_terminate_custom_vesting_during_release() {
     // TERMINATE, 2Y + Y / 2, 5/8 unlocked
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2 + ONE_YEAR_SEC / 2);
     ft_storage_deposit(&users.eve, TOKEN_ID, &users.eve.account_id);
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount * 3 / 8);
     let terminator_balance = e.ft_balance_of(&users.eve);
     assert_eq!(terminator_balance, amount * 3 / 8);
@@ -666,7 +666,7 @@ fn test_lockup_terminate_custom_vesting_during_lockup_cliff() {
 
     // TERMINATE, 3Y + Y / 3, 5/6 vested
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 3 + ONE_YEAR_SEC / 3);
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, amount / 6);
     let terminator_balance = e.ft_balance_of(&users.eve);
     assert_eq!(terminator_balance, amount / 6);
@@ -753,7 +753,7 @@ fn test_lockup_terminate_custom_vesting_after_vesting_finished() {
 
     // TERMINATE, 4Y, fully vested
     e.set_time_sec(GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 4);
-    let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
+    let res: WrappedBalance = e.terminate(&e.owner, lockup_index).unwrap_json();
     assert_eq!(res.0, 0);
     let terminator_balance = e.ft_balance_of(&users.eve);
     assert_eq!(terminator_balance, 0);
