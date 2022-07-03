@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+pub use std::iter;
+
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
 pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
@@ -14,7 +16,7 @@ use ft_lockup::ft_token_receiver::DraftGroupFunding;
 pub use ft_lockup::lockup::{Lockup, LockupCreate, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
 pub use ft_lockup::termination::{TerminationConfig, VestingConditions};
-use ft_lockup::view::{DraftGroupView, DraftView, LockupView};
+pub use ft_lockup::view::{DraftGroupView, DraftView, LockupView};
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
@@ -36,6 +38,7 @@ pub const DRAFT_OPERATOR_ID: &str = "draft_operator.near";
 pub const T_GAS: Gas = 10u64.pow(12);
 pub const DEFAULT_GAS: Gas = 15 * T_GAS;
 pub const MAX_GAS: Gas = 300 * T_GAS;
+pub const FT_TRANSFER_CALL_GAS: Gas = 60 * T_GAS;
 pub const CLAIM_GAS: Gas = 100 * T_GAS;
 pub const TERMINATE_GAS: Gas = 100 * T_GAS;
 
@@ -265,7 +268,7 @@ impl Env {
             })
             .to_string()
             .into_bytes(),
-            MAX_GAS,
+            FT_TRANSFER_CALL_GAS,
             1,
         )
     }
@@ -285,7 +288,23 @@ impl Env {
         amount: Balance,
         draft_group_id: DraftGroupIndex,
     ) -> ExecutionResult {
-        let funding = DraftGroupFunding { draft_group_id };
+        let funding = DraftGroupFunding {
+            draft_group_id,
+            try_convert: None,
+        };
+        self.ft_transfer_call(user, amount, &serde_json::to_string(&funding).unwrap())
+    }
+
+    pub fn fund_draft_group_with_convert(
+        &self,
+        user: &UserAccount,
+        amount: Balance,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        let funding = DraftGroupFunding {
+            draft_group_id,
+            try_convert: Some(true),
+        };
         self.ft_transfer_call(user, amount, &serde_json::to_string(&funding).unwrap())
     }
 
@@ -446,7 +465,7 @@ impl Env {
     pub fn create_drafts(&self, user: &UserAccount, drafts: &Vec<Draft>) -> ExecutionResult {
         user.function_call(
             self.contract.contract.create_drafts(drafts.clone()),
-            DEFAULT_GAS,
+            MAX_GAS,
             0,
         )
     }

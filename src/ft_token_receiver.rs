@@ -4,6 +4,8 @@ use crate::*;
 #[serde(crate = "near_sdk::serde")]
 pub struct DraftGroupFunding {
     pub draft_group_id: DraftGroupIndex,
+    // use remaining gas to try converting drafts
+    pub try_convert: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -55,6 +57,16 @@ impl FungibleTokenReceiver for Contract {
                 draft_group.fund(&sender_id);
                 self.draft_groups.insert(&draft_group_id as _, &draft_group);
                 log!("Funded draft group {}", draft_group_id);
+
+                if funding.try_convert.unwrap_or(false) {
+                    // Using remaining gas to try convert drafts, not waiting for results
+                    ext_self::convert_drafts(
+                        draft_group.draft_indices.into_iter().collect(),
+                        &env::current_account_id(),
+                        NO_DEPOSIT,
+                        env::prepaid_gas() - GAS_FT_ON_TRANSFER,
+                    );
+                }
             }
         }
 

@@ -36,6 +36,7 @@ pub type TokenAccountId = AccountId;
 
 const GAS_FOR_FT_TRANSFER: Gas = 15_000_000_000_000;
 const GAS_FOR_AFTER_FT_TRANSFER: Gas = 20_000_000_000_000;
+const GAS_FT_ON_TRANSFER: Gas = 10_000_000_000_000;
 
 const ONE_YOCTO: Balance = 1;
 const NO_DEPOSIT: Balance = 0;
@@ -57,6 +58,8 @@ pub trait SelfCallbacks {
         account_id: AccountId,
         amount: WrappedBalance,
     ) -> WrappedBalance;
+
+    fn convert_drafts(&mut self, draft_ids: Vec<DraftIndex>) -> Vec<LockupIndex>;
 }
 
 #[near_bindgen]
