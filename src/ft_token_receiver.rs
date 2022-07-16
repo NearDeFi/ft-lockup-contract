@@ -60,12 +60,16 @@ impl FungibleTokenReceiver for Contract {
 
                 if funding.try_convert.unwrap_or(false) {
                     // Using remaining gas to try convert drafts, not waiting for results
-                    ext_self::convert_drafts(
-                        draft_group.draft_indices.into_iter().collect(),
-                        &env::current_account_id(),
-                        NO_DEPOSIT,
-                        env::prepaid_gas() - GAS_FT_ON_TRANSFER,
-                    );
+                    if let Some(remaining_gas) = env::prepaid_gas().checked_sub(GAS_FT_ON_TRANSFER) {
+                        if remaining_gas > GAS_MIN_FOR_CONVERT {
+                            ext_self::convert_drafts(
+                                draft_group.draft_indices.into_iter().collect(),
+                                &env::current_account_id(),
+                                NO_DEPOSIT,
+                                remaining_gas,
+                            );
+                        }
+                    }
                 }
             }
         }
