@@ -83,6 +83,7 @@ fn test_terminate_basic_payer_logic() {
     assert!(format!("{:?}", res.status()).contains("No termination config"));
 }
 
+#[test]
 fn test_terminate_when_payer_doesnt_have_storage_deposit() {
     let e = Env::init(None);
     let users = Users::init(&e);
@@ -147,7 +148,7 @@ fn test_terminate_when_payer_doesnt_have_storage_deposit() {
         "expected refund finish first timestamp one second before the termination"
     );
     // finish checkpoint is termination timestamp
-    assert_eq!(lockup.schedule.0[1].balance, amount / 3);
+    assert_eq!(lockup.schedule.0[1].balance, amount * 2 / 3);
     assert_eq!(
         lockup.schedule.0[1].timestamp, // trimmed schedule
         termination_timestamp,
