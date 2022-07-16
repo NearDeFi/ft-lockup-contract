@@ -48,6 +48,7 @@ impl Schedule {
         ])
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new_unlocked(total_balance: Balance) -> Self {
         Self::new_unlocked_since(total_balance, 1)
     }
