@@ -79,7 +79,7 @@ impl SelfCallbacks for Contract {
         if !promise_success {
             log!("Lockup termination transfer has failed.");
             // There is no internal balance, so instead we create a new lockup.
-            let lockup = Lockup::new_unlocked(account_id, amount.0);
+            let lockup = Lockup::new_unlocked_since(account_id, amount.0, current_timestamp_sec());
             let lockup_index = self.internal_add_lockup(&lockup);
             log!(
                 "Generated a new lockup #{} as a refund of {} for account {}",
