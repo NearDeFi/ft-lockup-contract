@@ -68,6 +68,14 @@ pub struct FtLockupClaimLockup {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupTerminateLockup {
+    pub id: LockupIndex,
+    pub termination_timestamp: TimestampSec,
+    pub unvested_balance: WrappedBalance,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -78,6 +86,7 @@ pub(crate) enum EventKind {
     FtLockupRemoveFromDraftOperatorsWhitelist(FtLockupRemoveFromDraftOperatorsWhitelist),
     FtLockupCreateLockup(Vec<FtLockupCreateLockup>),
     FtLockupClaimLockup(Vec<FtLockupClaimLockup>),
+    FtLockupTerminateLockup(Vec<FtLockupTerminateLockup>),
 }
 
 #[derive(Serialize, Debug)]
@@ -318,6 +327,42 @@ mod tests {
                         {
                             "id": lockup_id,
                             "amount": amount,
+                        },
+                    ],
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_terminate_lockup() {
+        testing_env!(get_context());
+
+        let lockup_id: LockupIndex = 100;
+        let termination_timestamp: TimestampSec = 1_800_000_000;
+        let unvested_balance: WrappedBalance = 10000.into();
+
+        let event = FtLockupTerminateLockup {
+            id: lockup_id,
+            termination_timestamp,
+            unvested_balance,
+        };
+
+        emit(EventKind::FtLockupTerminateLockup(vec![event]));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_terminate_lockup",
+                    "data": [
+                        {
+                            "id": lockup_id,
+                            "termination_timestamp": termination_timestamp,
+                            "unvested_balance": unvested_balance,
                         },
                     ],
                 })

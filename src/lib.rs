@@ -283,6 +283,13 @@ impl Contract {
             self.internal_save_account_lockups(&lockup_account_id, indices);
         }
 
+        let event = FtLockupTerminateLockup {
+            id: lockup_index,
+            termination_timestamp,
+            unvested_balance: unvested_balance.into(),
+        };
+        emit(EventKind::FtLockupTerminateLockup(vec![event]));
+
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
                 beneficiary_id.clone(),

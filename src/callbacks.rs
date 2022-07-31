@@ -88,12 +88,8 @@ impl SelfCallbacks for Contract {
             // There is no internal balance, so instead we create a new lockup.
             let lockup = Lockup::new_unlocked_since(account_id, amount.0, current_timestamp_sec());
             let lockup_index = self.internal_add_lockup(&lockup);
-            log!(
-                "Generated a new lockup #{} as a refund of {} for account {}",
-                lockup_index,
-                amount.0,
-                lockup.account_id.as_ref(),
-            );
+            let event: FtLockupCreateLockup = (lockup_index, lockup, None).into();
+            emit(EventKind::FtLockupCreateLockup(vec![event]));
             0.into()
         } else {
             amount
