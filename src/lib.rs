@@ -112,7 +112,7 @@ impl Contract {
         draft_operators_whitelist: Option<Vec<ValidAccountId>>,
     ) -> Self {
         let mut deposit_whitelist_set = UnorderedSet::new(StorageKey::DepositWhitelist);
-        deposit_whitelist_set.extend(deposit_whitelist.into_iter().map(|a| a.into()));
+        deposit_whitelist_set.extend(deposit_whitelist.clone().into_iter().map(|a| a.into()));
         let mut draft_operators_whitelist_set =
             UnorderedSet::new(StorageKey::DraftOperatorsWhitelist);
         draft_operators_whitelist_set.extend(
@@ -121,8 +121,11 @@ impl Contract {
                 .into_iter()
                 .map(|a| a.into()),
         );
-        event::emit(event::EventKind::FtLockupNew(FtLockupNew {
+        emit(EventKind::FtLockupNew(FtLockupNew {
             token_account_id: token_account_id.clone().into(),
+        }));
+        emit(EventKind::FtLockupAddToDepositWhitelist(FtLockupAddToDepositWhitelist {
+            account_ids: deposit_whitelist.into_iter().map(|x| x.into()).collect(),
         }));
         Self {
             lockups: Vector::new(StorageKey::Lockups),
@@ -304,9 +307,12 @@ impl Contract {
         } else {
             vec![account_id.expect("expected either account_id or account_ids")]
         };
-        for account_id in account_ids {
+        for account_id in &account_ids {
             self.deposit_whitelist.insert(account_id.as_ref());
         }
+        emit(EventKind::FtLockupAddToDepositWhitelist(FtLockupAddToDepositWhitelist {
+            account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+        }));
     }
 
     // preserving both options for API compatibility
