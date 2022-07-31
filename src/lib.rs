@@ -15,6 +15,7 @@ use near_sdk::{
 
 pub mod callbacks;
 pub mod draft;
+pub mod event;
 pub mod ft_token_receiver;
 pub mod internal;
 pub mod lockup;
@@ -24,6 +25,7 @@ pub mod util;
 pub mod view;
 
 use crate::draft::*;
+use crate::event::*;
 use crate::lockup::*;
 use crate::schedule::*;
 use crate::termination::*;
@@ -34,6 +36,7 @@ near_sdk::setup_alloc!();
 pub type TimestampSec = u32;
 pub type TokenAccountId = AccountId;
 
+pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const GAS_FOR_FT_TRANSFER: Gas = 15_000_000_000_000;
@@ -118,6 +121,9 @@ impl Contract {
                 .into_iter()
                 .map(|a| a.into()),
         );
+        event::emit(event::EventKind::FtLockupNew(FtLockupNew {
+            token_account_id: token_account_id.clone().into(),
+        }));
         Self {
             lockups: Vector::new(StorageKey::Lockups),
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
