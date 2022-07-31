@@ -124,9 +124,11 @@ impl Contract {
         emit(EventKind::FtLockupNew(FtLockupNew {
             token_account_id: token_account_id.clone().into(),
         }));
-        emit(EventKind::FtLockupAddToDepositWhitelist(FtLockupAddToDepositWhitelist {
-            account_ids: deposit_whitelist.into_iter().map(|x| x.into()).collect(),
-        }));
+        emit(EventKind::FtLockupAddToDepositWhitelist(
+            FtLockupAddToDepositWhitelist {
+                account_ids: deposit_whitelist.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
         Self {
             lockups: Vector::new(StorageKey::Lockups),
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
@@ -310,9 +312,11 @@ impl Contract {
         for account_id in &account_ids {
             self.deposit_whitelist.insert(account_id.as_ref());
         }
-        emit(EventKind::FtLockupAddToDepositWhitelist(FtLockupAddToDepositWhitelist {
-            account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
-        }));
+        emit(EventKind::FtLockupAddToDepositWhitelist(
+            FtLockupAddToDepositWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     // preserving both options for API compatibility

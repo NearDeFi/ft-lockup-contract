@@ -97,8 +97,13 @@ mod tests {
     fn test_ft_lockup_add_to_deposit_whitelist() {
         testing_env!(get_context());
 
-        let account_ids: Vec<AccountId> = vec!["alice.near", "bob.near"].iter().map(|&x| x.into()).collect();
-        emit(EventKind::FtLockupAddToDepositWhitelist(FtLockupAddToDepositWhitelist { account_ids}));
+        let account_ids: Vec<AccountId> = vec!["alice.near", "bob.near"]
+            .iter()
+            .map(|&x| x.into())
+            .collect();
+        emit(EventKind::FtLockupAddToDepositWhitelist(
+            FtLockupAddToDepositWhitelist { account_ids },
+        ));
         assert_eq!(
             test_utils::get_logs()[0],
             format!(
