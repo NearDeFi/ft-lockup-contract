@@ -375,9 +375,14 @@ impl Contract {
     pub fn remove_from_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        for account_id in account_ids {
+        for account_id in &account_ids {
             self.draft_operators_whitelist.remove(account_id.as_ref());
         }
+        emit(EventKind::FtLockupRemoveFromDraftOperatorsWhitelist(
+            FtLockupRemoveFromDraftOperatorsWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {

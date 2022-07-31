@@ -28,6 +28,12 @@ pub struct FtLockupAddToDraftOperatorsWhitelist {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupRemoveFromDraftOperatorsWhitelist {
+    pub account_ids: Vec<AccountId>,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -35,6 +41,7 @@ pub(crate) enum EventKind {
     FtLockupAddToDepositWhitelist(FtLockupAddToDepositWhitelist),
     FtLockupRemoveFromDepositWhitelist(FtLockupRemoveFromDepositWhitelist),
     FtLockupAddToDraftOperatorsWhitelist(FtLockupAddToDraftOperatorsWhitelist),
+    FtLockupRemoveFromDraftOperatorsWhitelist(FtLockupRemoveFromDraftOperatorsWhitelist),
 }
 
 #[derive(Serialize, Debug)]
@@ -178,6 +185,32 @@ mod tests {
                     "standard": PACKAGE_NAME,
                     "version": VERSION,
                     "event": "ft_lockup_add_to_draft_operators_whitelist",
+                    "data": { "account_ids": ["alice.near", "bob.near"] },
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_remove_from_draft_operators_whitelist() {
+        testing_env!(get_context());
+
+        let account_ids: Vec<AccountId> = vec!["alice.near", "bob.near"]
+            .iter()
+            .map(|&x| x.into())
+            .collect();
+        emit(EventKind::FtLockupRemoveFromDraftOperatorsWhitelist(
+            FtLockupRemoveFromDraftOperatorsWhitelist { account_ids },
+        ));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_remove_from_draft_operators_whitelist",
                     "data": { "account_ids": ["alice.near", "bob.near"] },
                 })
                 .to_string(),
