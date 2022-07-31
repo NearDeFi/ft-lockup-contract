@@ -34,6 +34,33 @@ pub struct FtLockupRemoveFromDraftOperatorsWhitelist {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupCreateLockup {
+    pub id: LockupIndex,
+    pub account_id: AccountId,
+    pub balance: WrappedBalance,
+    pub start: TimestampSec,
+    pub finish: TimestampSec,
+    pub terminatable: bool,
+    pub draft_id: Option<DraftIndex>,
+}
+
+impl From<(LockupIndex, Lockup, Option<DraftIndex>)> for FtLockupCreateLockup {
+    fn from(tuple: (LockupIndex, Lockup, Option<DraftIndex>)) -> Self {
+        let (id, lockup, draft_id) = tuple;
+        Self {
+            id,
+            account_id: lockup.account_id.to_string(),
+            balance: lockup.schedule.total_balance().into(),
+            start: lockup.schedule.0.first().unwrap().timestamp,
+            finish: lockup.schedule.0.last().unwrap().timestamp,
+            terminatable: lockup.termination_config.is_some(),
+            draft_id,
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -42,6 +69,7 @@ pub(crate) enum EventKind {
     FtLockupRemoveFromDepositWhitelist(FtLockupRemoveFromDepositWhitelist),
     FtLockupAddToDraftOperatorsWhitelist(FtLockupAddToDraftOperatorsWhitelist),
     FtLockupRemoveFromDraftOperatorsWhitelist(FtLockupRemoveFromDraftOperatorsWhitelist),
+    FtLockupCreateLockup(Vec<FtLockupCreateLockup>),
 }
 
 #[derive(Serialize, Debug)]
@@ -212,6 +240,45 @@ mod tests {
                     "version": VERSION,
                     "event": "ft_lockup_remove_from_draft_operators_whitelist",
                     "data": { "account_ids": ["alice.near", "bob.near"] },
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_create_lockup() {
+        testing_env!(get_context());
+
+        let account_id: AccountId = "alice.near".into();
+        let balance: WrappedBalance = 10_000.into();
+        let timestamp: TimestampSec = 1_500_000_000;
+        let lockup = Lockup::new_unlocked_since(account_id.clone(), balance.0, timestamp);
+        let lockup_id: LockupIndex = 100;
+        let draft_id: DraftIndex = 33;
+
+        let event: FtLockupCreateLockup = (100, lockup, Some(draft_id)).into();
+
+        emit(EventKind::FtLockupCreateLockup(vec![event]));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_create_lockup",
+                    "data": [
+                        {
+                            "id": lockup_id,
+                            "account_id": account_id,
+                            "balance": balance,
+                            "start": timestamp - 1,
+                            "finish": timestamp,
+                            "terminatable": false,
+                            "draft_id": Some(draft_id),
+                        },
+                    ],
                 })
                 .to_string(),
             )

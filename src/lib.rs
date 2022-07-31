@@ -448,6 +448,7 @@ impl Contract {
 
     pub fn convert_drafts(&mut self, draft_ids: Vec<DraftIndex>) -> Vec<LockupIndex> {
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let mut events: Vec<FtLockupCreateLockup> = vec![];
         let lockup_ids: Vec<LockupIndex> = draft_ids
             .iter()
             .map(|draft_id| {
@@ -472,16 +473,15 @@ impl Contract {
 
                 let lockup = draft.lockup_create.into_lockup(&payer_id);
                 let index = self.internal_add_lockup(&lockup);
-                log!(
-                    "Created new lockup for {} with index {} from draft {}",
-                    lockup.account_id.as_ref(),
-                    index,
-                    draft_id,
-                );
+
+                let event: FtLockupCreateLockup = (index, lockup, Some(draft_id.clone())).into();
+                events.push(event);
 
                 index
             })
             .collect();
+
+        emit(EventKind::FtLockupCreateLockup(events));
 
         draft_group_lookup
             .iter()
