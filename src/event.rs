@@ -61,6 +61,13 @@ impl From<(LockupIndex, Lockup, Option<DraftIndex>)> for FtLockupCreateLockup {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupClaimLockup {
+    pub id: LockupIndex,
+    pub amount: WrappedBalance,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -70,6 +77,7 @@ pub(crate) enum EventKind {
     FtLockupAddToDraftOperatorsWhitelist(FtLockupAddToDraftOperatorsWhitelist),
     FtLockupRemoveFromDraftOperatorsWhitelist(FtLockupRemoveFromDraftOperatorsWhitelist),
     FtLockupCreateLockup(Vec<FtLockupCreateLockup>),
+    FtLockupClaimLockup(Vec<FtLockupClaimLockup>),
 }
 
 #[derive(Serialize, Debug)]
@@ -277,6 +285,39 @@ mod tests {
                             "finish": timestamp,
                             "terminatable": false,
                             "draft_id": Some(draft_id),
+                        },
+                    ],
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_claim_lockup() {
+        testing_env!(get_context());
+
+        let lockup_id: LockupIndex = 100;
+        let amount: WrappedBalance = 10000.into();
+
+        let event = FtLockupClaimLockup {
+            id: lockup_id,
+            amount,
+        };
+
+        emit(EventKind::FtLockupClaimLockup(vec![event]));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_claim_lockup",
+                    "data": [
+                        {
+                            "id": lockup_id,
+                            "amount": amount,
                         },
                     ],
                 })

@@ -26,6 +26,7 @@ impl SelfCallbacks for Contract {
         let mut total_balance = 0;
         if promise_success {
             let mut remove_indices = vec![];
+            let mut events: Vec<FtLockupClaimLockup> = vec![];
             for LockupClaim {
                 index,
                 is_final,
@@ -36,6 +37,11 @@ impl SelfCallbacks for Contract {
                     remove_indices.push(index);
                 }
                 total_balance += claim_amount.0;
+                let event = FtLockupClaimLockup {
+                    id: index,
+                    amount: claim_amount,
+                };
+                events.push(event);
             }
             if !remove_indices.is_empty() {
                 let mut indices = self.account_lockups.get(&account_id).unwrap_or_default();
@@ -44,6 +50,7 @@ impl SelfCallbacks for Contract {
                 }
                 self.internal_save_account_lockups(&account_id, indices);
             }
+            emit(EventKind::FtLockupClaimLockup(events));
         } else {
             log!("Token transfer has failed. Refunding.");
             let mut modified = false;
