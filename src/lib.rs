@@ -117,6 +117,7 @@ impl Contract {
             UnorderedSet::new(StorageKey::DraftOperatorsWhitelist);
         draft_operators_whitelist_set.extend(
             draft_operators_whitelist
+                .clone()
                 .unwrap_or(vec![])
                 .into_iter()
                 .map(|a| a.into()),
@@ -127,6 +128,15 @@ impl Contract {
         emit(EventKind::FtLockupAddToDepositWhitelist(
             FtLockupAddToDepositWhitelist {
                 account_ids: deposit_whitelist.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
+        emit(EventKind::FtLockupAddToDraftOperatorsWhitelist(
+            FtLockupAddToDraftOperatorsWhitelist {
+                account_ids: draft_operators_whitelist
+                    .unwrap_or(vec![])
+                    .into_iter()
+                    .map(|x| x.into())
+                    .collect(),
             },
         ));
         Self {
@@ -346,9 +356,14 @@ impl Contract {
     pub fn add_to_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        for account_id in account_ids {
+        for account_id in &account_ids {
             self.draft_operators_whitelist.insert(account_id.as_ref());
         }
+        emit(EventKind::FtLockupAddToDraftOperatorsWhitelist(
+            FtLockupAddToDraftOperatorsWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     #[payable]
