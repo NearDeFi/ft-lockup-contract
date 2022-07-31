@@ -113,3 +113,11 @@ fn test_get_token_account_id() {
     let result = e.get_token_account_id();
     assert_eq!(result, e.token.valid_account_id());
 }
+
+#[test]
+fn test_get_version() {
+    let e = Env::init(None);
+
+    let result = e.get_version();
+    assert_eq!(result, env!("CARGO_PKG_VERSION").to_string());
+}

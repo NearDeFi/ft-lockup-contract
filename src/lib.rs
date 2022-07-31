@@ -34,6 +34,8 @@ near_sdk::setup_alloc!();
 pub type TimestampSec = u32;
 pub type TokenAccountId = AccountId;
 
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 const GAS_FOR_FT_TRANSFER: Gas = 15_000_000_000_000;
 const GAS_FOR_AFTER_FT_TRANSFER: Gas = 20_000_000_000_000;
 const GAS_EXT_CALL_COST: Gas = 10_000_000_000_000;
