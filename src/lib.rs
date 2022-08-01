@@ -524,6 +524,8 @@ impl Contract {
         } else {
             self.draft_groups.insert(&draft_group_id as _, &draft_group);
         }
+
+        emit(EventKind::FtLockupDiscardDraftGroup(vec![FtLockupDiscardDraftGroup { id: draft_group_id}]));
     }
 
     pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
