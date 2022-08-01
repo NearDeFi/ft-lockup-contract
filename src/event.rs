@@ -434,9 +434,7 @@ mod tests {
 
         let draft_group_id: DraftGroupIndex = 22;
 
-        let event = FtLockupCreateDraftGroup {
-            id: draft_group_id,
-        };
+        let event = FtLockupCreateDraftGroup { id: draft_group_id };
 
         emit(EventKind::FtLockupCreateDraftGroup(vec![event]));
         assert_eq!(
@@ -471,7 +469,10 @@ mod tests {
             vesting_schedule: None,
         };
         let draft_group_id: DraftGroupIndex = 123;
-        let draft = Draft { draft_group_id, lockup_create };
+        let draft = Draft {
+            draft_group_id,
+            lockup_create,
+        };
         let draft_id: DraftIndex = 33;
 
         let event: FtLockupCreateDraft = (draft_id, draft).into();
@@ -541,9 +542,7 @@ mod tests {
 
         let draft_group_id: DraftGroupIndex = 22;
 
-        let event = FtLockupDiscardDraftGroup {
-            id: draft_group_id,
-        };
+        let event = FtLockupDiscardDraftGroup { id: draft_group_id };
 
         emit(EventKind::FtLockupDiscardDraftGroup(vec![event]));
         assert_eq!(
@@ -571,9 +570,7 @@ mod tests {
 
         let draft_id: DraftIndex = 22;
 
-        let event = FtLockupDeleteDraft {
-            id: draft_id,
-        };
+        let event = FtLockupDeleteDraft { id: draft_id };
 
         emit(EventKind::FtLockupDeleteDraft(vec![event]));
         assert_eq!(

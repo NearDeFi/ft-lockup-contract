@@ -403,9 +403,9 @@ impl Contract {
                 .is_none(),
             "Invariant"
         );
-        emit(EventKind::FtLockupCreateDraftGroup(
-            vec![FtLockupCreateDraftGroup { id: index }]
-        ));
+        emit(EventKind::FtLockupCreateDraftGroup(vec![
+            FtLockupCreateDraftGroup { id: index },
+        ]));
 
         index
     }
@@ -525,7 +525,9 @@ impl Contract {
             self.draft_groups.insert(&draft_group_id as _, &draft_group);
         }
 
-        emit(EventKind::FtLockupDiscardDraftGroup(vec![FtLockupDiscardDraftGroup { id: draft_group_id}]));
+        emit(EventKind::FtLockupDiscardDraftGroup(vec![
+            FtLockupDiscardDraftGroup { id: draft_group_id },
+        ]));
     }
 
     pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
@@ -549,7 +551,9 @@ impl Contract {
 
             assert!(draft_group.draft_indices.remove(draft_id), "Invariant");
 
-            let event = FtLockupDeleteDraft { id: draft_id.clone() };
+            let event = FtLockupDeleteDraft {
+                id: draft_id.clone(),
+            };
             events.push(event);
         }
 
