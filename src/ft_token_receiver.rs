@@ -75,6 +75,8 @@ impl FungibleTokenReceiver for Contract {
                         }
                     }
                 }
+                let event = FtLockupFundDraftGroup { id: draft_group_id, amount: amount.into() };
+                emit(EventKind::FtLockupFundDraftGroup(vec![event]));
             }
         }
 

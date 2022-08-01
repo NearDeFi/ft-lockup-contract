@@ -109,6 +109,13 @@ impl From<(DraftIndex, Draft)> for FtLockupCreateDraft {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupFundDraftGroup {
+    pub id: DraftGroupIndex,
+    pub amount: WrappedBalance,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -122,6 +129,7 @@ pub(crate) enum EventKind {
     FtLockupTerminateLockup(Vec<FtLockupTerminateLockup>),
     FtLockupCreateDraftGroup(Vec<FtLockupCreateDraftGroup>),
     FtLockupCreateDraft(Vec<FtLockupCreateDraft>),
+    FtLockupFundDraftGroup(Vec<FtLockupFundDraftGroup>),
 }
 
 #[derive(Serialize, Debug)]
@@ -472,6 +480,39 @@ mod tests {
                             "start": timestamp - 1,
                             "finish": timestamp,
                             "terminatable": false,
+                        },
+                    ],
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_fund_draft_group() {
+        testing_env!(get_context());
+
+        let draft_group_id: DraftGroupIndex = 22;
+        let amount: WrappedBalance = 10000.into();
+
+        let event = FtLockupFundDraftGroup {
+            id: draft_group_id,
+            amount,
+        };
+
+        emit(EventKind::FtLockupFundDraftGroup(vec![event]));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_fund_draft_group",
+                    "data": [
+                        {
+                            "id": draft_group_id,
+                            "amount": amount,
                         },
                     ],
                 })
