@@ -122,6 +122,12 @@ pub struct FtLockupDiscardDraftGroup {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupDeleteDraft {
+    pub id: DraftIndex,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -137,6 +143,7 @@ pub(crate) enum EventKind {
     FtLockupCreateDraft(Vec<FtLockupCreateDraft>),
     FtLockupFundDraftGroup(Vec<FtLockupFundDraftGroup>),
     FtLockupDiscardDraftGroup(Vec<FtLockupDiscardDraftGroup>),
+    FtLockupDeleteDraft(Vec<FtLockupDeleteDraft>),
 }
 
 #[derive(Serialize, Debug)]
@@ -550,6 +557,36 @@ mod tests {
                     "data": [
                         {
                             "id": draft_group_id,
+                        },
+                    ],
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_delete_draft() {
+        testing_env!(get_context());
+
+        let draft_id: DraftIndex = 22;
+
+        let event = FtLockupDeleteDraft {
+            id: draft_id,
+        };
+
+        emit(EventKind::FtLockupDeleteDraft(vec![event]));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_delete_draft",
+                    "data": [
+                        {
+                            "id": draft_id,
                         },
                     ],
                 })

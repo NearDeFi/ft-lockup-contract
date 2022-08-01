@@ -531,6 +531,7 @@ impl Contract {
     pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
         // no authorization required here since the draft group discard has been authorized
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let mut events: Vec<FtLockupDeleteDraft> = vec![];
         for draft_id in &draft_ids {
             let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
             let draft_group = draft_group_lookup
@@ -547,7 +548,12 @@ impl Contract {
             draft_group.total_amount -= amount;
 
             assert!(draft_group.draft_indices.remove(draft_id), "Invariant");
+
+            let event = FtLockupDeleteDraft { id: draft_id.clone() };
+            events.push(event);
         }
+
+        emit(EventKind::FtLockupDeleteDraft(events));
 
         for (draft_group_id, draft_group) in &draft_group_lookup {
             if draft_group.draft_indices.is_empty() {
