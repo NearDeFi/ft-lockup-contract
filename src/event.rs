@@ -82,6 +82,33 @@ pub struct FtLockupCreateDraftGroup {
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
+pub struct FtLockupCreateDraft {
+    pub id: DraftIndex,
+    pub draft_group_id: DraftGroupIndex,
+    pub account_id: AccountId,
+    pub balance: WrappedBalance,
+    pub start: TimestampSec,
+    pub finish: TimestampSec,
+    pub terminatable: bool,
+}
+
+impl From<(DraftIndex, Draft)> for FtLockupCreateDraft {
+    fn from(tuple: (DraftIndex, Draft)) -> Self {
+        let (id, draft) = tuple;
+        Self {
+            id,
+            draft_group_id: draft.draft_group_id,
+            account_id: draft.lockup_create.account_id.to_string(),
+            balance: draft.lockup_create.schedule.total_balance().into(),
+            start: draft.lockup_create.schedule.0.first().unwrap().timestamp,
+            finish: draft.lockup_create.schedule.0.last().unwrap().timestamp,
+            terminatable: draft.lockup_create.vesting_schedule.is_some(),
+        }
+    }
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
 #[serde(tag = "event", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum EventKind {
@@ -94,6 +121,7 @@ pub(crate) enum EventKind {
     FtLockupClaimLockup(Vec<FtLockupClaimLockup>),
     FtLockupTerminateLockup(Vec<FtLockupTerminateLockup>),
     FtLockupCreateDraftGroup(Vec<FtLockupCreateDraftGroup>),
+    FtLockupCreateDraft(Vec<FtLockupCreateDraft>),
 }
 
 #[derive(Serialize, Debug)]
@@ -400,6 +428,50 @@ mod tests {
                     "data": [
                         {
                             "id": draft_group_id,
+                        },
+                    ],
+                })
+                .to_string(),
+            )
+        );
+    }
+
+    #[test]
+    fn test_ft_lockup_create_draft() {
+        testing_env!(get_context());
+
+        let account_id: ValidAccountId = "alice.near".try_into().unwrap();
+        let balance: WrappedBalance = 10_000.into();
+        let timestamp: TimestampSec = 1_500_000_000;
+        let lockup_create = LockupCreate {
+            account_id: account_id.clone(),
+            schedule: Schedule::new_unlocked_since(balance.0, timestamp),
+            vesting_schedule: None,
+        };
+        let draft_group_id: DraftGroupIndex = 123;
+        let draft = Draft { draft_group_id, lockup_create };
+        let draft_id: DraftIndex = 33;
+
+        let event: FtLockupCreateDraft = (draft_id, draft).into();
+
+        emit(EventKind::FtLockupCreateDraft(vec![event]));
+        assert_eq!(
+            test_utils::get_logs()[0],
+            format!(
+                r"EVENT_JSON:{}",
+                json!({
+                    "standard": PACKAGE_NAME,
+                    "version": VERSION,
+                    "event": "ft_lockup_create_draft",
+                    "data": [
+                        {
+                            "id": draft_id,
+                            "draft_group_id": draft_group_id,
+                            "account_id": account_id.to_string(),
+                            "balance": balance,
+                            "start": timestamp - 1,
+                            "finish": timestamp,
+                            "terminatable": false,
                         },
                     ],
                 })

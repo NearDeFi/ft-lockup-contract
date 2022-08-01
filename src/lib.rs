@@ -417,8 +417,9 @@ impl Contract {
     pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
         self.assert_draft_operators_whitelist(&env::predecessor_account_id());
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let mut events: Vec<FtLockupCreateDraft> = vec![];
         let draft_ids: Vec<DraftIndex> = drafts
-            .iter()
+            .into_iter()
             .map(|draft| {
                 let draft_group = draft_group_lookup
                     .entry(draft.draft_group_id)
@@ -438,11 +439,14 @@ impl Contract {
                     .checked_add(draft.total_balance())
                     .expect("attempt to add with overflow");
                 draft_group.draft_indices.insert(index);
+                let event: FtLockupCreateDraft = (index, draft).into();
+                events.push(event);
 
                 index
             })
             .collect();
 
+        emit(EventKind::FtLockupCreateDraft(events));
         draft_group_lookup
             .iter()
             .for_each(|(draft_group_id, draft_group)| {

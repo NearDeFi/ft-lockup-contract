@@ -274,7 +274,7 @@ fn test_fund_draft_group_with_convert_too_big_group() {
 
     e.create_draft_group(&e.owner);
 
-    let n_drafts = 200;
+    let n_drafts = 100;
     // intentionally create too big draft group to convert with restricted gas
     let drafts: Vec<Draft> = iter::repeat(draft).take(n_drafts).collect();
 
