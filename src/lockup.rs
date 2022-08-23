@@ -3,6 +3,16 @@ use std::convert::TryInto;
 
 pub type LockupIndex = u32;
 
+#[derive(BorshDeserialize, BorshSerialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(
+    not(target_arch = "wasm32"),
+    derive(Debug, PartialEq, Clone, Serialize)
+)]
+pub struct BatchedUsers {
+    pub batch: Vec<(ValidAccountId, U128)>,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
