@@ -68,8 +68,15 @@ pub struct Contract {
 
     pub account_lockups: LookupMap<AccountId, HashSet<LockupIndex>>,
 
-    /// Account IDs that can create new lockups.
+    /// account ids that can perform all actions:
+    /// - manage deposit_whitelist
+    /// - manage drafts, draft_groups
+    /// - create lockups, terminate lockups, fund draft_groups
     pub deposit_whitelist: UnorderedSet<AccountId>,
+
+    /// account ids that can perform all actions on drafts:
+    /// - manage drafts, draft_groups
+    pub draft_operators_whitelist: UnorderedSet<AccountId>,
 
     pub next_draft_id: DraftIndex,
     pub drafts: LookupMap<DraftIndex, Draft>,
@@ -82,6 +89,7 @@ pub(crate) enum StorageKey {
     Lockups,
     AccountLockups,
     DepositWhitelist,
+    DraftOperatorsWhitelist,
     Drafts,
     DraftGroups,
 }
@@ -89,14 +97,27 @@ pub(crate) enum StorageKey {
 #[near_bindgen]
 impl Contract {
     #[init]
-    pub fn new(token_account_id: ValidAccountId, deposit_whitelist: Vec<ValidAccountId>) -> Self {
+    pub fn new(
+        token_account_id: ValidAccountId,
+        deposit_whitelist: Vec<ValidAccountId>,
+        draft_operators_whitelist: Option<Vec<ValidAccountId>>,
+    ) -> Self {
         let mut deposit_whitelist_set = UnorderedSet::new(StorageKey::DepositWhitelist);
         deposit_whitelist_set.extend(deposit_whitelist.into_iter().map(|a| a.into()));
+        let mut draft_operators_whitelist_set =
+            UnorderedSet::new(StorageKey::DraftOperatorsWhitelist);
+        draft_operators_whitelist_set.extend(
+            draft_operators_whitelist
+                .unwrap_or(vec![])
+                .into_iter()
+                .map(|a| a.into()),
+        );
         Self {
             lockups: Vector::new(StorageKey::Lockups),
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
             token_account_id: token_account_id.into(),
             deposit_whitelist: deposit_whitelist_set,
+            draft_operators_whitelist: draft_operators_whitelist_set,
             next_draft_id: 0,
             drafts: LookupMap::new(StorageKey::Drafts),
             next_draft_group_id: 0,
@@ -209,7 +230,7 @@ impl Contract {
         termination_timestamp: Option<TimestampSec>,
     ) -> PromiseOrValue<WrappedBalance> {
         assert_one_yocto();
-        let account_id = env::predecessor_account_id();
+        self.assert_deposit_whitelist(&env::predecessor_account_id());
         let mut lockup = self
             .lockups
             .get(lockup_index as _)
@@ -220,8 +241,8 @@ impl Contract {
             termination_timestamp >= current_timestamp,
             "expected termination_timestamp >= now",
         );
-        let unvested_balance =
-            lockup.terminate(&account_id, hashed_schedule, termination_timestamp);
+        let (unvested_balance, beneficiary_id) =
+            lockup.terminate(hashed_schedule, termination_timestamp);
         self.lockups.replace(lockup_index as _, &lockup);
 
         // no need to store empty lockup
@@ -237,7 +258,7 @@ impl Contract {
 
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
-                account_id.clone(),
+                beneficiary_id.clone(),
                 unvested_balance.into(),
                 Some(format!("Terminated lockup #{}", lockup_index)),
                 &self.token_account_id,
@@ -245,7 +266,7 @@ impl Contract {
                 GAS_FOR_FT_TRANSFER,
             )
             .then(ext_self::after_lockup_termination(
-                account_id,
+                beneficiary_id,
                 unvested_balance.into(),
                 &env::current_account_id(),
                 NO_DEPOSIT,
@@ -257,22 +278,68 @@ impl Contract {
         }
     }
 
+    // preserving both options for API compatibility
     #[payable]
-    pub fn add_to_deposit_whitelist(&mut self, account_id: ValidAccountId) {
+    pub fn add_to_deposit_whitelist(
+        &mut self,
+        account_id: Option<ValidAccountId>,
+        account_ids: Option<Vec<ValidAccountId>>,
+    ) {
         assert_one_yocto();
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        self.deposit_whitelist.insert(account_id.as_ref());
+        let account_ids = if let Some(account_ids) = account_ids {
+            account_ids
+        } else {
+            vec![account_id.expect("expected either account_id or account_ids")]
+        };
+        for account_id in account_ids {
+            self.deposit_whitelist.insert(account_id.as_ref());
+        }
+    }
+
+    // preserving both options for API compatibility
+    #[payable]
+    pub fn remove_from_deposit_whitelist(
+        &mut self,
+        account_id: Option<ValidAccountId>,
+        account_ids: Option<Vec<ValidAccountId>>,
+    ) {
+        assert_one_yocto();
+        self.assert_deposit_whitelist(&env::predecessor_account_id());
+        let account_ids = if let Some(account_ids) = account_ids {
+            account_ids
+        } else {
+            vec![account_id.expect("expected either account_id or account_ids")]
+        };
+        for account_id in account_ids {
+            self.deposit_whitelist.remove(&account_id.into());
+        }
+        assert!(
+            !self.deposit_whitelist.is_empty(),
+            "cannot remove all accounts from deposit whitelist",
+        );
     }
 
     #[payable]
-    pub fn remove_from_deposit_whitelist(&mut self, account_id: ValidAccountId) {
+    pub fn add_to_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        self.deposit_whitelist.remove(account_id.as_ref());
+        for account_id in account_ids {
+            self.draft_operators_whitelist.insert(account_id.as_ref());
+        }
+    }
+
+    #[payable]
+    pub fn remove_from_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
+        assert_one_yocto();
+        self.assert_deposit_whitelist(&env::predecessor_account_id());
+        for account_id in account_ids {
+            self.draft_operators_whitelist.remove(account_id.as_ref());
+        }
     }
 
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {
-        self.assert_deposit_whitelist(&env::predecessor_account_id());
+        self.assert_draft_operators_whitelist(&env::predecessor_account_id());
 
         let index = self.next_draft_group_id;
         self.next_draft_group_id += 1;
@@ -291,7 +358,7 @@ impl Contract {
     }
 
     pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
-        self.assert_deposit_whitelist(&env::predecessor_account_id());
+        self.assert_draft_operators_whitelist(&env::predecessor_account_id());
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
         let draft_ids: Vec<DraftIndex> = drafts
             .iter()
@@ -383,7 +450,7 @@ impl Contract {
     }
 
     pub fn discard_draft_group(&mut self, draft_group_id: DraftGroupIndex) {
-        self.assert_deposit_whitelist(&env::predecessor_account_id());
+        self.assert_draft_operators_whitelist(&env::predecessor_account_id());
 
         let mut draft_group = self
             .draft_groups

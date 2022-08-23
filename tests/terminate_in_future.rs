@@ -36,7 +36,7 @@ fn test_lockup_terminate_with_timestamp_in_future() {
 
     // try TERMINATE with past timestamp
     let res = e.terminate_with_timestamp(
-        &users.eve,
+        &e.owner,
         lockup_index,
         GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1 - 1,
     );
@@ -46,7 +46,7 @@ fn test_lockup_terminate_with_timestamp_in_future() {
     // TERMINATE with future timestamp
     let res: WrappedBalance = e
         .terminate_with_timestamp(
-            &users.eve,
+            &e.owner,
             lockup_index,
             GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
         )

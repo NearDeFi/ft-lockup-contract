@@ -3,7 +3,7 @@
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
 pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
-use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
+pub use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
 pub use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
@@ -31,6 +31,7 @@ pub const NEAR: &str = "near";
 pub const TOKEN_ID: &str = "token.near";
 pub const FT_LOCKUP_ID: &str = "ft-lockup.near";
 pub const OWNER_ID: &str = "owner.near";
+pub const DRAFT_OPERATOR_ID: &str = "draft_operator.near";
 
 pub const T_GAS: Gas = 10u64.pow(12);
 pub const DEFAULT_GAS: Gas = 15 * T_GAS;
@@ -45,6 +46,7 @@ pub struct Env {
     pub root: UserAccount,
     pub near: UserAccount,
     pub owner: UserAccount,
+    pub draft_operator: UserAccount,
     pub contract: ContractAccount<FtLockupContract>,
     pub token: UserAccount,
 }
@@ -168,6 +170,7 @@ impl Env {
         let root = init_simulator(Some(genesis_config));
         let near = root.create_user(NEAR.to_string(), to_yocto("1000000"));
         let owner = near.create_user(OWNER_ID.to_string(), to_yocto("10000"));
+        let draft_operator = near.create_user(DRAFT_OPERATOR_ID.to_string(), to_yocto("10000"));
 
         let token = near.deploy_and_init(
             &FUNGIBLE_TOKEN_WASM_BYTES,
@@ -201,7 +204,8 @@ impl Env {
             gas: DEFAULT_GAS,
             init_method: new(
                 token.valid_account_id(),
-                deposit_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()])
+                deposit_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()]),
+                Some(vec![draft_operator.valid_account_id()])
             )
         );
 
@@ -211,6 +215,7 @@ impl Env {
             root,
             near,
             owner,
+            draft_operator,
             contract,
             token,
         }
@@ -330,15 +335,45 @@ impl Env {
         )
     }
 
+    pub fn remove_from_deposit_whitelist_single(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "remove_from_deposit_whitelist",
+            &json!({ "account_id": account_id }).to_string().into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn add_to_deposit_whitelist_single(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "add_to_deposit_whitelist",
+            &json!({ "account_id": account_id }).to_string().into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
     pub fn remove_from_deposit_whitelist(
         &self,
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
-        user.function_call(
-            self.contract
-                .contract
-                .remove_from_deposit_whitelist(account_id.clone()),
+        user.call(
+            self.contract.account_id(),
+            "remove_from_deposit_whitelist",
+            &json!({ "account_ids": vec![account_id] })
+                .to_string()
+                .into_bytes(),
             DEFAULT_GAS,
             1,
         )
@@ -349,10 +384,40 @@ impl Env {
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "add_to_deposit_whitelist",
+            &json!({ "account_ids": vec![account_id] })
+                .to_string()
+                .into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn remove_from_draft_operators_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
         user.function_call(
             self.contract
                 .contract
-                .add_to_deposit_whitelist(account_id.clone()),
+                .remove_from_draft_operators_whitelist(vec![account_id.clone()]),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn add_to_draft_operators_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .add_to_draft_operators_whitelist(vec![account_id.clone()]),
             DEFAULT_GAS,
             1,
         )
@@ -443,6 +508,12 @@ impl Env {
     pub fn get_deposit_whitelist(&self) -> Vec<AccountId> {
         self.near
             .view_method_call(self.contract.contract.get_deposit_whitelist())
+            .unwrap_json()
+    }
+
+    pub fn get_draft_operators_whitelist(&self) -> Vec<AccountId> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft_operators_whitelist())
             .unwrap_json()
     }
 
