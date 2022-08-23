@@ -808,12 +808,15 @@ fn test_draft_operator_permission_updates() {
     let balance: WrappedBalance = res.unwrap_json();
     assert_eq!(balance.0, amount);
 
+    // adding new draft operator, it's not allowed to remove every deposit_whitelist
+    let res = e.add_to_deposit_whitelist(&e.owner, &users.charlie.valid_account_id());
+    assert!(res.is_ok());
     // removing deposit role, draft operator role must be retained
     let res = e.remove_from_deposit_whitelist(&e.owner, &e.owner.valid_account_id());
     assert!(res.is_ok());
     // deposit role is removed
     let res: Vec<AccountId> = e.get_deposit_whitelist();
-    assert_eq!(res, vec![] as Vec<AccountId>);
+    assert_eq!(res, vec![users.charlie.account_id()] as Vec<AccountId>);
     // draft operator role is still present
     let res: Vec<AccountId> = e.get_draft_operators_whitelist();
     assert_eq!(res, vec![users.eve.account_id(), e.owner.account_id()]);

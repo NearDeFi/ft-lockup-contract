@@ -100,9 +100,10 @@ fn test_deposit_whitelist_get() {
     // not increased
     assert_eq!(lockups.len(), 1);
 
-    // user from whiltelist can remove itself from the list, even if it's the last user
+    // try remove last user from the list, should fail
     let res = e.remove_from_deposit_whitelist(&users.eve, &users.eve.valid_account_id());
-    assert!(res.is_ok());
-    let deposit_whitelist = e.get_deposit_whitelist();
-    assert!(deposit_whitelist.is_empty());
+    assert!(!res.is_ok());
+    assert!(
+        format!("{:?}", res.status()).contains("cannot remove all accounts from deposit whitelist")
+    );
 }

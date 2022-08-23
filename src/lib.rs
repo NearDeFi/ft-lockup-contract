@@ -314,6 +314,10 @@ impl Contract {
         for account_id in account_ids {
             self.deposit_whitelist.remove(&account_id.into());
         }
+        assert!(
+            !self.deposit_whitelist.is_empty(),
+            "cannot remove all accounts from deposit whitelist",
+        );
     }
 
     #[payable]
