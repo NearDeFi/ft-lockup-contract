@@ -36,7 +36,7 @@ pub type TokenAccountId = AccountId;
 
 const GAS_FOR_FT_TRANSFER: Gas = 15_000_000_000_000;
 const GAS_FOR_AFTER_FT_TRANSFER: Gas = 20_000_000_000_000;
-const GAS_EXT_CALL_COST: Gas = 5_000_000_000_000;
+const GAS_EXT_CALL_COST: Gas = 10_000_000_000_000;
 const GAS_MIN_FOR_CONVERT: Gas = 15_000_000_000_000;
 
 const ONE_YOCTO: Balance = 1;
