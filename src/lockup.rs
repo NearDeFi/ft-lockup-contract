@@ -27,13 +27,21 @@ pub struct Lockup {
 }
 
 impl Lockup {
-    pub fn new_unlocked(account_id: AccountId, total_balance: Balance) -> Self {
+    pub fn new_unlocked_since(
+        account_id: AccountId,
+        total_balance: Balance,
+        timestamp: TimestampSec,
+    ) -> Self {
         Self {
             account_id: account_id.try_into().unwrap(),
-            schedule: Schedule::new_unlocked(total_balance),
+            schedule: Schedule::new_unlocked_since(total_balance, timestamp),
             claimed_balance: 0,
             termination_config: None,
         }
+    }
+
+    pub fn new_unlocked(account_id: AccountId, total_balance: Balance) -> Self {
+        Self::new_unlocked_since(account_id, total_balance, 1)
     }
 
     pub fn claim(&mut self, index: LockupIndex, claim_amount: Balance) -> LockupClaim {

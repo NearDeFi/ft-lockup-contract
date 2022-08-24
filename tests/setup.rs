@@ -62,6 +62,10 @@ pub struct Users {
 pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
     let lockup_schedule = Schedule(vec![
         Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC,
+            balance: 0,
+        },
+        Checkpoint {
             timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
             balance: 0,
         },
@@ -75,6 +79,10 @@ pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
         },
     ]);
     let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC,
+            balance: 0,
+        },
         Checkpoint {
             timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
             balance: 0,
