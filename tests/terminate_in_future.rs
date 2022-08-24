@@ -133,11 +133,9 @@ fn test_lockup_terminate_with_timestamp_in_future_no_storage_deposit() {
     let termination_call_timestamp = GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 1 / 3;
     let termination_effective_timestamp = GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2 / 3;
     e.set_time_sec(termination_call_timestamp);
-    let res: WrappedBalance = e.terminate_with_timestamp(
-        &users.eve,
-        lockup_index,
-        termination_effective_timestamp
-    ).unwrap_json();
+    let res: WrappedBalance = e
+        .terminate_with_timestamp(&users.eve, lockup_index, termination_effective_timestamp)
+        .unwrap_json();
     assert_eq!(res.0, 0);
     let lockups = e.get_account_lockups(&users.eve);
     assert_eq!(lockups.len(), 1);

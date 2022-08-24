@@ -131,7 +131,7 @@ fn test_terminate_when_payer_doesnt_have_storage_deposit() {
     e.set_time_sec(termination_timestamp);
     let res: WrappedBalance = e.terminate(&users.eve, lockup_index).unwrap_json();
     assert_eq!(res.0, 0);
-    let lockups= e.get_account_lockups(&users.eve);
+    let lockups = e.get_account_lockups(&users.eve);
     assert_eq!(lockups.len(), 1);
     let lockup = &lockups[0].1;
     assert_eq!(lockup.unclaimed_balance, amount * 2 / 3);
