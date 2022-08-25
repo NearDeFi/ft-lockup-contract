@@ -223,6 +223,88 @@ fn test_fund_draft_group() {
 }
 
 #[test]
+fn test_fund_draft_group_with_convert() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let amount = d(60000, TOKEN_DECIMALS);
+    let draft_group_id = 0;
+    let draft = Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
+    };
+
+    e.create_draft_group(&e.owner);
+
+    // create draft 0
+    let res = e.create_draft(&e.owner, &draft);
+    assert!(res.is_ok());
+
+    // fund draft group
+    let res = e.fund_draft_group_with_convert(&e.owner, amount, 0);
+    let balance: WrappedBalance = res.unwrap_json();
+    assert_eq!(balance.0, amount);
+
+    let res = e.get_draft_group(0);
+    assert!(res.is_none(), "expected draft group to be removed");
+
+    // draft should have been converted to lockup
+    let res = e.get_lockups_paged(None, None);
+    assert_eq!(res.len(), 1);
+    // draft should have been converted to lockup
+    let res = e.get_draft(0);
+    assert!(res.is_none(), "expected draft to be converted");
+    let res = e.get_draft_groups_paged(None, None);
+    assert_eq!(res.len(), 0, "expected draft group to be removed");
+}
+
+#[test]
+fn test_fund_draft_group_with_convert_too_big_group() {
+    let e = Env::init(None);
+    let users = Users::init(&e);
+    e.set_time_sec(GENESIS_TIMESTAMP_SEC);
+
+    let amount = d(600, TOKEN_DECIMALS);
+    let draft_group_id = 0;
+    let draft = Draft {
+        draft_group_id,
+        lockup_create: LockupCreate::new_unlocked(users.alice.valid_account_id(), amount),
+    };
+
+    e.create_draft_group(&e.owner);
+
+    let n_drafts = 200;
+    // intentionally create too big draft group to convert with restricted gas
+    let drafts: Vec<Draft> = iter::repeat(draft).take(n_drafts).collect();
+
+    // create draft 0
+    let res = e.create_drafts(&e.owner, &drafts);
+    assert!(res.is_ok());
+
+    // fund draft group
+    let res = e.fund_draft_group_with_convert(&e.owner, amount * (n_drafts as Balance), 0);
+    let balance: WrappedBalance = res.unwrap_json();
+    // draft group has been converted since ft_transfer_call succeeds
+    assert_eq!(balance.0, amount * (n_drafts as Balance));
+
+    // but the draft group tried to be converted and failed
+    let res = e.get_draft_group(0);
+    assert!(res.is_some(), "expected draft group to not be removed");
+    let res: DraftGroupView = res.unwrap();
+    assert!(res.funded, "expected draft group to be funded");
+
+    // lockups should not have been created
+    let res = e.get_lockups_paged(None, None);
+    assert_eq!(res.len(), 0);
+    // draft should not have been converted to lockup
+    let res = e.get_draft(0);
+    assert!(res.is_some(), "expected draft not to be converted");
+    let res = e.get_draft_groups_paged(None, None);
+    assert_eq!(res.len(), 1, "expected draft group not to be removed");
+}
+
+#[test]
 fn test_convert_draft() {
     let e = Env::init(None);
     let users = Users::init(&e);
