@@ -241,4 +241,8 @@ impl Contract {
             .filter_map(|index| self.get_draft(index).map(|draft| (index, draft)))
             .collect()
     }
+
+    pub fn get_version(&self) -> String {
+        VERSION.into()
+    }
 }

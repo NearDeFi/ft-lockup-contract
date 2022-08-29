@@ -15,6 +15,7 @@ use near_sdk::{
 
 pub mod callbacks;
 pub mod draft;
+pub mod event;
 pub mod ft_token_receiver;
 pub mod internal;
 pub mod lockup;
@@ -24,6 +25,7 @@ pub mod util;
 pub mod view;
 
 use crate::draft::*;
+use crate::event::*;
 use crate::lockup::*;
 use crate::schedule::*;
 use crate::termination::*;
@@ -33,6 +35,9 @@ near_sdk::setup_alloc!();
 
 pub type TimestampSec = u32;
 pub type TokenAccountId = AccountId;
+
+pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const GAS_FOR_FT_TRANSFER: Gas = 15_000_000_000_000;
 const GAS_FOR_AFTER_FT_TRANSFER: Gas = 20_000_000_000_000;
@@ -107,15 +112,33 @@ impl Contract {
         draft_operators_whitelist: Option<Vec<ValidAccountId>>,
     ) -> Self {
         let mut deposit_whitelist_set = UnorderedSet::new(StorageKey::DepositWhitelist);
-        deposit_whitelist_set.extend(deposit_whitelist.into_iter().map(|a| a.into()));
+        deposit_whitelist_set.extend(deposit_whitelist.clone().into_iter().map(|a| a.into()));
         let mut draft_operators_whitelist_set =
             UnorderedSet::new(StorageKey::DraftOperatorsWhitelist);
         draft_operators_whitelist_set.extend(
             draft_operators_whitelist
+                .clone()
                 .unwrap_or(vec![])
                 .into_iter()
                 .map(|a| a.into()),
         );
+        emit(EventKind::FtLockupNew(FtLockupNew {
+            token_account_id: token_account_id.clone().into(),
+        }));
+        emit(EventKind::FtLockupAddToDepositWhitelist(
+            FtLockupAddToDepositWhitelist {
+                account_ids: deposit_whitelist.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
+        emit(EventKind::FtLockupAddToDraftOperatorsWhitelist(
+            FtLockupAddToDraftOperatorsWhitelist {
+                account_ids: draft_operators_whitelist
+                    .unwrap_or(vec![])
+                    .into_iter()
+                    .map(|x| x.into())
+                    .collect(),
+            },
+        ));
         Self {
             lockups: Vector::new(StorageKey::Lockups),
             account_lockups: LookupMap::new(StorageKey::AccountLockups),
@@ -260,6 +283,13 @@ impl Contract {
             self.internal_save_account_lockups(&lockup_account_id, indices);
         }
 
+        let event = FtLockupTerminateLockup {
+            id: lockup_index,
+            termination_timestamp,
+            unvested_balance: unvested_balance.into(),
+        };
+        emit(EventKind::FtLockupTerminateLockup(vec![event]));
+
         if unvested_balance > 0 {
             ext_fungible_token::ft_transfer(
                 beneficiary_id.clone(),
@@ -296,9 +326,14 @@ impl Contract {
         } else {
             vec![account_id.expect("expected either account_id or account_ids")]
         };
-        for account_id in account_ids {
+        for account_id in &account_ids {
             self.deposit_whitelist.insert(account_id.as_ref());
         }
+        emit(EventKind::FtLockupAddToDepositWhitelist(
+            FtLockupAddToDepositWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     // preserving both options for API compatibility
@@ -315,31 +350,46 @@ impl Contract {
         } else {
             vec![account_id.expect("expected either account_id or account_ids")]
         };
-        for account_id in account_ids {
-            self.deposit_whitelist.remove(&account_id.into());
+        for account_id in &account_ids {
+            self.deposit_whitelist.remove(&account_id.to_string());
         }
         assert!(
             !self.deposit_whitelist.is_empty(),
             "cannot remove all accounts from deposit whitelist",
         );
+        emit(EventKind::FtLockupRemoveFromDepositWhitelist(
+            FtLockupRemoveFromDepositWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     #[payable]
     pub fn add_to_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        for account_id in account_ids {
+        for account_id in &account_ids {
             self.draft_operators_whitelist.insert(account_id.as_ref());
         }
+        emit(EventKind::FtLockupAddToDraftOperatorsWhitelist(
+            FtLockupAddToDraftOperatorsWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     #[payable]
     pub fn remove_from_draft_operators_whitelist(&mut self, account_ids: Vec<ValidAccountId>) {
         assert_one_yocto();
         self.assert_deposit_whitelist(&env::predecessor_account_id());
-        for account_id in account_ids {
+        for account_id in &account_ids {
             self.draft_operators_whitelist.remove(account_id.as_ref());
         }
+        emit(EventKind::FtLockupRemoveFromDraftOperatorsWhitelist(
+            FtLockupRemoveFromDraftOperatorsWhitelist {
+                account_ids: account_ids.into_iter().map(|x| x.into()).collect(),
+            },
+        ));
     }
 
     pub fn create_draft_group(&mut self) -> DraftGroupIndex {
@@ -353,6 +403,9 @@ impl Contract {
                 .is_none(),
             "Invariant"
         );
+        emit(EventKind::FtLockupCreateDraftGroup(vec![
+            FtLockupCreateDraftGroup { id: index },
+        ]));
 
         index
     }
@@ -364,8 +417,9 @@ impl Contract {
     pub fn create_drafts(&mut self, drafts: Vec<Draft>) -> Vec<DraftIndex> {
         self.assert_draft_operators_whitelist(&env::predecessor_account_id());
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let mut events: Vec<FtLockupCreateDraft> = vec![];
         let draft_ids: Vec<DraftIndex> = drafts
-            .iter()
+            .into_iter()
             .map(|draft| {
                 let draft_group = draft_group_lookup
                     .entry(draft.draft_group_id)
@@ -385,11 +439,14 @@ impl Contract {
                     .checked_add(draft.total_balance())
                     .expect("attempt to add with overflow");
                 draft_group.draft_indices.insert(index);
+                let event: FtLockupCreateDraft = (index, draft).into();
+                events.push(event);
 
                 index
             })
             .collect();
 
+        emit(EventKind::FtLockupCreateDraft(events));
         draft_group_lookup
             .iter()
             .for_each(|(draft_group_id, draft_group)| {
@@ -405,6 +462,7 @@ impl Contract {
 
     pub fn convert_drafts(&mut self, draft_ids: Vec<DraftIndex>) -> Vec<LockupIndex> {
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let mut events: Vec<FtLockupCreateLockup> = vec![];
         let lockup_ids: Vec<LockupIndex> = draft_ids
             .iter()
             .map(|draft_id| {
@@ -429,16 +487,15 @@ impl Contract {
 
                 let lockup = draft.lockup_create.into_lockup(&payer_id);
                 let index = self.internal_add_lockup(&lockup);
-                log!(
-                    "Created new lockup for {} with index {} from draft {}",
-                    lockup.account_id.as_ref(),
-                    index,
-                    draft_id,
-                );
+
+                let event: FtLockupCreateLockup = (index, lockup, Some(draft_id.clone())).into();
+                events.push(event);
 
                 index
             })
             .collect();
+
+        emit(EventKind::FtLockupCreateLockup(events));
 
         draft_group_lookup
             .iter()
@@ -467,11 +524,16 @@ impl Contract {
         } else {
             self.draft_groups.insert(&draft_group_id as _, &draft_group);
         }
+
+        emit(EventKind::FtLockupDiscardDraftGroup(vec![
+            FtLockupDiscardDraftGroup { id: draft_group_id },
+        ]));
     }
 
     pub fn delete_drafts(&mut self, draft_ids: Vec<DraftIndex>) {
         // no authorization required here since the draft group discard has been authorized
         let mut draft_group_lookup: HashMap<DraftGroupIndex, DraftGroup> = HashMap::new();
+        let mut events: Vec<FtLockupDeleteDraft> = vec![];
         for draft_id in &draft_ids {
             let draft = self.drafts.remove(&draft_id as _).expect("draft not found");
             let draft_group = draft_group_lookup
@@ -488,7 +550,14 @@ impl Contract {
             draft_group.total_amount -= amount;
 
             assert!(draft_group.draft_indices.remove(draft_id), "Invariant");
+
+            let event = FtLockupDeleteDraft {
+                id: draft_id.clone(),
+            };
+            events.push(event);
         }
+
+        emit(EventKind::FtLockupDeleteDraft(events));
 
         for (draft_group_id, draft_group) in &draft_group_lookup {
             if draft_group.draft_indices.is_empty() {

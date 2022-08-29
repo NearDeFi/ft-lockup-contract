@@ -570,6 +570,12 @@ impl Env {
             .unwrap_json()
     }
 
+    pub fn get_version(&self) -> String {
+        self.near
+            .view_method_call(self.contract.contract.get_version())
+            .unwrap_json()
+    }
+
     pub fn get_next_draft_group_id(&self) -> DraftGroupIndex {
         self.near
             .view_method_call(self.contract.contract.get_next_draft_group_id())

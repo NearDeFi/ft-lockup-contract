@@ -43,6 +43,8 @@ impl FungibleTokenReceiver for Contract {
                     lockup.account_id.as_ref(),
                     index
                 );
+                let event: FtLockupCreateLockup = (index, lockup, None).into();
+                emit(EventKind::FtLockupCreateLockup(vec![event]));
             }
             FtMessage::DraftGroupFunding(funding) => {
                 let draft_group_id = funding.draft_group_id;
@@ -73,6 +75,11 @@ impl FungibleTokenReceiver for Contract {
                         }
                     }
                 }
+                let event = FtLockupFundDraftGroup {
+                    id: draft_group_id,
+                    amount: amount.into(),
+                };
+                emit(EventKind::FtLockupFundDraftGroup(vec![event]));
             }
         }
 
