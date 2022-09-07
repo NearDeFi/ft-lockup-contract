@@ -8,8 +8,8 @@ use near_sdk::json_types::U128;
 
 const ONE_YEAR_SEC: TimestampSec = 365 * 30 * 24 * 60 * 60;
 
-const TGE_TIMESTAMP: TimestampSec = 1663070400; // 2022-09-13T12:00:00 UTC
-const FULL_UNLOCK_TIMESTAMP: TimestampSec = 1726228800; // 2024-09-13T12:00:00 UTC
+const TGE_TIMESTAMP: TimestampSec = 1663059600; // 2022-09-13T09:00:00 UTC
+const FULL_UNLOCK_TIMESTAMP: TimestampSec = 1726218000; // 2024-09-13T09:00:00 UTC
 
 #[test]
 fn test_tge_user() {
