@@ -1,18 +1,22 @@
 #![allow(dead_code)]
 
+pub use std::iter;
+
 use near_contract_standards::fungible_token::metadata::{FungibleTokenMetadata, FT_METADATA_SPEC};
 pub use near_sdk::json_types::{Base58CryptoHash, ValidAccountId, WrappedBalance};
 use near_sdk::serde_json::json;
-use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
+pub use near_sdk::{env, serde_json, AccountId, Balance, Gas, Timestamp};
 use near_sdk_sim::runtime::GenesisConfig;
-use near_sdk_sim::{
+pub use near_sdk_sim::{
     deploy, init_simulator, to_yocto, ContractAccount, ExecutionResult, UserAccount, ViewResult,
 };
 
-pub use ft_lockup::lockup::{Lockup, LockupIndex};
+pub use ft_lockup::draft::{Draft, DraftGroupIndex, DraftIndex};
+use ft_lockup::ft_token_receiver::DraftGroupFunding;
+pub use ft_lockup::lockup::{Lockup, LockupCreate, LockupIndex};
 pub use ft_lockup::schedule::{Checkpoint, Schedule};
-pub use ft_lockup::termination::{HashOrSchedule, TerminationConfig};
-use ft_lockup::view::LockupView;
+pub use ft_lockup::termination::{TerminationConfig, VestingConditions};
+pub use ft_lockup::view::{DraftGroupView, DraftView, LockupView};
 pub use ft_lockup::{ContractContract as FtLockupContract, TimestampSec};
 
 near_sdk_sim::lazy_static_include::lazy_static_include_bytes! {
@@ -29,10 +33,12 @@ pub const NEAR: &str = "near";
 pub const TOKEN_ID: &str = "token.near";
 pub const FT_LOCKUP_ID: &str = "ft-lockup.near";
 pub const OWNER_ID: &str = "owner.near";
+pub const DRAFT_OPERATOR_ID: &str = "draft_operator.near";
 
 pub const T_GAS: Gas = 10u64.pow(12);
 pub const DEFAULT_GAS: Gas = 15 * T_GAS;
 pub const MAX_GAS: Gas = 300 * T_GAS;
+pub const FT_TRANSFER_CALL_GAS: Gas = 60 * T_GAS;
 pub const CLAIM_GAS: Gas = 100 * T_GAS;
 pub const TERMINATE_GAS: Gas = 100 * T_GAS;
 
@@ -43,6 +49,7 @@ pub struct Env {
     pub root: UserAccount,
     pub near: UserAccount,
     pub owner: UserAccount,
+    pub draft_operator: UserAccount,
     pub contract: ContractAccount<FtLockupContract>,
     pub token: UserAccount,
 }
@@ -58,6 +65,10 @@ pub struct Users {
 pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
     let lockup_schedule = Schedule(vec![
         Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC,
+            balance: 0,
+        },
+        Checkpoint {
             timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC * 2,
             balance: 0,
         },
@@ -71,6 +82,10 @@ pub fn lockup_vesting_schedule(amount: u128) -> (Schedule, Schedule) {
         },
     ]);
     let vesting_schedule = Schedule(vec![
+        Checkpoint {
+            timestamp: GENESIS_TIMESTAMP_SEC,
+            balance: 0,
+        },
         Checkpoint {
             timestamp: GENESIS_TIMESTAMP_SEC + ONE_YEAR_SEC - 1,
             balance: 0,
@@ -166,6 +181,7 @@ impl Env {
         let root = init_simulator(Some(genesis_config));
         let near = root.create_user(NEAR.to_string(), to_yocto("1000000"));
         let owner = near.create_user(OWNER_ID.to_string(), to_yocto("10000"));
+        let draft_operator = near.create_user(DRAFT_OPERATOR_ID.to_string(), to_yocto("10000"));
 
         let token = near.deploy_and_init(
             &FUNGIBLE_TOKEN_WASM_BYTES,
@@ -199,7 +215,8 @@ impl Env {
             gas: DEFAULT_GAS,
             init_method: new(
                 token.valid_account_id(),
-                deposit_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()])
+                deposit_whitelist.unwrap_or_else(|| vec![owner.valid_account_id()]),
+                Some(vec![draft_operator.valid_account_id()])
             )
         );
 
@@ -209,9 +226,30 @@ impl Env {
             root,
             near,
             owner,
+            draft_operator,
             contract,
             token,
         }
+    }
+
+    pub fn ft_transfer(
+        &self,
+        sender: &UserAccount,
+        amount: Balance,
+        receiver: &UserAccount,
+    ) -> ExecutionResult {
+        sender.call(
+            self.token.account_id.clone(),
+            "ft_transfer",
+            &json!({
+                "receiver_id": receiver.valid_account_id(),
+                "amount": WrappedBalance::from(amount),
+            })
+            .to_string()
+            .into_bytes(),
+            MAX_GAS,
+            1,
+        )
     }
 
     pub fn ft_transfer_call(
@@ -230,7 +268,7 @@ impl Env {
             })
             .to_string()
             .into_bytes(),
-            MAX_GAS,
+            FT_TRANSFER_CALL_GAS,
             1,
         )
     }
@@ -239,20 +277,58 @@ impl Env {
         &self,
         user: &UserAccount,
         amount: Balance,
-        lockup: &Lockup,
+        lockup_create: &LockupCreate,
     ) -> ExecutionResult {
-        self.ft_transfer_call(user, amount, &serde_json::to_string(lockup).unwrap())
+        self.ft_transfer_call(user, amount, &serde_json::to_string(lockup_create).unwrap())
+    }
+
+    pub fn fund_draft_group(
+        &self,
+        user: &UserAccount,
+        amount: Balance,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        let funding = DraftGroupFunding {
+            draft_group_id,
+            try_convert: None,
+        };
+        self.ft_transfer_call(user, amount, &serde_json::to_string(&funding).unwrap())
+    }
+
+    pub fn fund_draft_group_with_convert(
+        &self,
+        user: &UserAccount,
+        amount: Balance,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        let funding = DraftGroupFunding {
+            draft_group_id,
+            try_convert: Some(true),
+        };
+        self.ft_transfer_call(user, amount, &serde_json::to_string(&funding).unwrap())
     }
 
     pub fn claim(&self, user: &UserAccount) -> ExecutionResult {
-        user.function_call(self.contract.contract.claim(), CLAIM_GAS, 0)
+        user.function_call(self.contract.contract.claim(None), CLAIM_GAS, 0)
+    }
+
+    pub fn claim_specific_lockups(
+        &self,
+        user: &UserAccount,
+        amounts: &Vec<(LockupIndex, Option<WrappedBalance>)>,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.claim(Some(amounts.clone())),
+            CLAIM_GAS,
+            0,
+        )
     }
 
     pub fn terminate(&self, user: &UserAccount, lockup_index: LockupIndex) -> ExecutionResult {
         user.function_call(
-            self.contract.contract.terminate(lockup_index, None),
+            self.contract.contract.terminate(lockup_index, None, None),
             TERMINATE_GAS,
-            0,
+            1,
         )
     }
 
@@ -265,9 +341,52 @@ impl Env {
         user.function_call(
             self.contract
                 .contract
-                .terminate(lockup_index, Some(hashed_schedule)),
+                .terminate(lockup_index, Some(hashed_schedule), None),
             TERMINATE_GAS,
-            0,
+            1,
+        )
+    }
+
+    pub fn terminate_with_timestamp(
+        &self,
+        user: &UserAccount,
+        lockup_index: LockupIndex,
+        termination_timestamp: TimestampSec,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .terminate(lockup_index, None, Some(termination_timestamp)),
+            TERMINATE_GAS,
+            1,
+        )
+    }
+
+    pub fn remove_from_deposit_whitelist_single(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "remove_from_deposit_whitelist",
+            &json!({ "account_id": account_id }).to_string().into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn add_to_deposit_whitelist_single(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "add_to_deposit_whitelist",
+            &json!({ "account_id": account_id }).to_string().into_bytes(),
+            DEFAULT_GAS,
+            1,
         )
     }
 
@@ -276,10 +395,12 @@ impl Env {
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
-        user.function_call(
-            self.contract
-                .contract
-                .remove_from_deposit_whitelist(account_id.clone()),
+        user.call(
+            self.contract.account_id(),
+            "remove_from_deposit_whitelist",
+            &json!({ "account_ids": vec![account_id] })
+                .to_string()
+                .into_bytes(),
             DEFAULT_GAS,
             1,
         )
@@ -290,12 +411,102 @@ impl Env {
         user: &UserAccount,
         account_id: &ValidAccountId,
     ) -> ExecutionResult {
+        user.call(
+            self.contract.account_id(),
+            "add_to_deposit_whitelist",
+            &json!({ "account_ids": vec![account_id] })
+                .to_string()
+                .into_bytes(),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn remove_from_draft_operators_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
         user.function_call(
             self.contract
                 .contract
-                .add_to_deposit_whitelist(account_id.clone()),
+                .remove_from_draft_operators_whitelist(vec![account_id.clone()]),
             DEFAULT_GAS,
             1,
+        )
+    }
+
+    pub fn add_to_draft_operators_whitelist(
+        &self,
+        user: &UserAccount,
+        account_id: &ValidAccountId,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract
+                .contract
+                .add_to_draft_operators_whitelist(vec![account_id.clone()]),
+            DEFAULT_GAS,
+            1,
+        )
+    }
+
+    pub fn create_draft_group(&self, user: &UserAccount) -> ExecutionResult {
+        user.function_call(self.contract.contract.create_draft_group(), DEFAULT_GAS, 0)
+    }
+
+    pub fn create_draft(&self, user: &UserAccount, draft: &Draft) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.create_draft(draft.clone()),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn create_drafts(&self, user: &UserAccount, drafts: &Vec<Draft>) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.create_drafts(drafts.clone()),
+            MAX_GAS,
+            0,
+        )
+    }
+
+    pub fn convert_draft(&self, user: &UserAccount, draft_id: DraftIndex) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.convert_draft(draft_id),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn convert_drafts(
+        &self,
+        user: &UserAccount,
+        draft_ids: &Vec<DraftIndex>,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.convert_drafts(draft_ids.clone()),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn discard_draft_group(
+        &self,
+        user: &UserAccount,
+        draft_group_id: DraftGroupIndex,
+    ) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.discard_draft_group(draft_group_id),
+            DEFAULT_GAS,
+            0,
+        )
+    }
+
+    pub fn delete_drafts(&self, user: &UserAccount, draft_ids: Vec<DraftIndex>) -> ExecutionResult {
+        user.function_call(
+            self.contract.contract.delete_drafts(draft_ids),
+            DEFAULT_GAS,
+            0,
         )
     }
 
@@ -327,6 +538,12 @@ impl Env {
             .unwrap_json()
     }
 
+    pub fn get_draft_operators_whitelist(&self) -> Vec<AccountId> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft_operators_whitelist())
+            .unwrap_json()
+    }
+
     pub fn hash_schedule(&self, schedule: &Schedule) -> Base58CryptoHash {
         self.near
             .view_method_call(self.contract.contract.hash_schedule(schedule.clone()))
@@ -350,6 +567,62 @@ impl Env {
     pub fn get_token_account_id(&self) -> ValidAccountId {
         self.near
             .view_method_call(self.contract.contract.get_token_account_id())
+            .unwrap_json()
+    }
+
+    pub fn get_version(&self) -> String {
+        self.near
+            .view_method_call(self.contract.contract.get_version())
+            .unwrap_json()
+    }
+
+    pub fn get_next_draft_group_id(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_next_draft_group_id())
+            .unwrap_json()
+    }
+
+    pub fn get_next_draft_id(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_next_draft_id())
+            .unwrap_json()
+    }
+
+    pub fn get_num_draft_groups(&self) -> DraftGroupIndex {
+        self.near
+            .view_method_call(self.contract.contract.get_num_draft_groups())
+            .unwrap_json()
+    }
+
+    pub fn get_draft_group(&self, index: DraftGroupIndex) -> Option<DraftGroupView> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft_group(index))
+            .unwrap_json()
+    }
+
+    pub fn get_draft_groups_paged(
+        &self,
+        from_index: Option<DraftGroupIndex>,
+        to_index: Option<DraftGroupIndex>,
+    ) -> Vec<(DraftGroupIndex, DraftGroupView)> {
+        self.near
+            .view_method_call(
+                self.contract
+                    .contract
+                    .get_draft_groups_paged(from_index, to_index),
+            )
+            .unwrap_json()
+    }
+
+    pub fn get_draft(&self, index: DraftIndex) -> Option<DraftView> {
+        self.near
+            .view_method_call(self.contract.contract.get_draft(index))
+            .unwrap_json()
+    }
+
+    pub fn get_drafts(&self, indices: Vec<DraftIndex>) -> Vec<(DraftIndex, DraftView)> {
+        self.near
+            .view_method_call(self.contract.contract.get_drafts(indices))
             .unwrap_json()
     }
 
