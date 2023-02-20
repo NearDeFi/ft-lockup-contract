@@ -8,6 +8,14 @@ impl Contract {
         );
     }
 
+    pub(crate) fn assert_draft_operators_whitelist(&self, account_id: &AccountId) {
+        assert!(
+            (self.deposit_whitelist.contains(account_id)
+                || self.draft_operators_whitelist.contains(account_id)),
+            "Not in draft operators whitelist"
+        );
+    }
+
     pub(crate) fn internal_add_lockup(&mut self, lockup: &Lockup) -> LockupIndex {
         let index = self.lockups.len() as LockupIndex;
         self.lockups.push(lockup);
@@ -41,6 +49,27 @@ impl Contract {
             .unwrap_or_default()
             .into_iter()
             .map(|lockup_index| (lockup_index, self.lockups.get(lockup_index as _).unwrap()))
+            .collect()
+    }
+
+    pub(crate) fn internal_get_account_lockups_by_id(
+        &self,
+        account_id: &AccountId,
+        lockup_ids: &HashSet<LockupIndex>,
+    ) -> Vec<(LockupIndex, Lockup)> {
+        let account_lockup_ids = self.account_lockups.get(account_id).unwrap_or_default();
+
+        lockup_ids
+            .iter()
+            .map(|&lockup_index| {
+                assert!(
+                    account_lockup_ids.contains(&lockup_index),
+                    "lockup not found for account: {}",
+                    lockup_index,
+                );
+                let lockup = self.lockups.get(lockup_index as _).unwrap();
+                (lockup_index.clone(), lockup)
+            })
             .collect()
     }
 }
