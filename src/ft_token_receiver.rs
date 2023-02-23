@@ -1,8 +1,5 @@
 use crate::*;
 
-const TGE_TIMESTAMP: u32 = 1663059600; // 2022-09-13T09:00:00 UTC
-const FULL_UNLOCK_TIMESTAMP: u32 = 1726218000; // 2024-09-13T09:00:00 UTC
-
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct DraftGroupFunding {
@@ -45,21 +42,8 @@ impl FungibleTokenReceiver for Contract {
                     sum = sum + account_total;
 
                     let user_lockup = Lockup {
-                        account_id: account_id,
-                        schedule: Schedule(vec![
-                            Checkpoint {
-                                timestamp: TGE_TIMESTAMP - 1,
-                                balance: 0,
-                            },
-                            Checkpoint {
-                                timestamp: TGE_TIMESTAMP,
-                                balance: 10 * account_total / 100,
-                            },
-                            Checkpoint {
-                                timestamp: FULL_UNLOCK_TIMESTAMP,
-                                balance: account_total,
-                            },
-                        ]),
+                        account_id,
+                        schedule: Schedule::new_on_tge(account_total),
                         claimed_balance: 0,
                         termination_config: None,
                     };
