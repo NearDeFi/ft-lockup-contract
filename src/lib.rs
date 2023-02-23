@@ -567,4 +567,25 @@ impl Contract {
             }
         }
     }
+
+    pub fn make_lockup_terminable(
+        &mut self,
+        beneficiary_id: ValidAccountId,
+        lockup_index: LockupIndex,
+    ) {
+        let lockup = self
+            .lockups
+            .get(lockup_index as _)
+            .expect("Lockup not found");
+        let termination_config = Some(TerminationConfig {
+            beneficiary_id,
+            vesting_schedule: VestingConditions::SameAsLockupSchedule,
+        });
+        let terminable_lockup = Lockup {
+            termination_config,
+            ..lockup
+        };
+
+        self.lockups.replace(lockup_index as _, &terminable_lockup);
+    }
 }
