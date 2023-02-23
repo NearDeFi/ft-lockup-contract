@@ -37,6 +37,13 @@ impl FungibleTokenReceiver for Contract {
         match ft_message {
             FtMessage::BatchedUsers(batched_users) => {
                 let mut sum: u128 = 0;
+                let termination_config = batched_users
+                    .beneficiary_id
+                    .map(|value| TerminationConfig {
+                        beneficiary_id: value,
+                        vesting_schedule: VestingConditions::SameAsLockupSchedule,
+                    });
+
                 for (account_id, sweat) in batched_users.batch {
                     let account_total = sweat.0;
                     sum = sum + account_total;
@@ -45,7 +52,7 @@ impl FungibleTokenReceiver for Contract {
                         account_id,
                         schedule: Schedule::new_on_tge(account_total),
                         claimed_balance: 0,
-                        termination_config: None,
+                        termination_config: termination_config.clone(),
                     };
                     user_lockup.assert_new_valid(account_total);
                     let _index = self.internal_add_lockup(&user_lockup);

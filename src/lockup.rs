@@ -7,6 +7,7 @@ pub type LockupIndex = u32;
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
 pub struct BatchedUsers {
+    pub beneficiary_id: Option<ValidAccountId>,
     pub batch: Vec<(ValidAccountId, U128)>,
 }
 
